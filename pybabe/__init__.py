@@ -21,8 +21,11 @@ class Babe(object):
             raise Exception ()
         return CSVPull(name, stream, dialect)
   
-    def map(self, column,  f ):
+    def map(self, column,  f):
         return Map(f, column, self)
+        
+    def multimap(self, d):
+        return MultiMap(self, d)
         
     def typedetect(self):
         "Create a stream where integer/floats are automatically detected"
@@ -72,9 +75,23 @@ class Map(Babe):
         self.column = column 
         self.stream = stream 
     def __iter__(self):
-        return itertools.imap(
-               lambda elt : elt._replace(**{self.column : self.f(getattr(elt, self.column))}) if not isinstance(elt, MetaInfo) else elt,
+        return itertools.imap(lambda elt : elt._replace(**{self.column : self.f(getattr(elt, self.column))}) if not isinstance(elt, MetaInfo) else elt,
                self.stream)
+               
+
+class MultiMap(Babe):
+    def __init__(self, stream, d):
+        self.stream = stream 
+        self.d = d
+    def map(self, elt):
+        if isinstance(elt, MetaInfo):
+            return elt
+        m = {}
+        for k in self.d:
+            m[k] = self.d[k](getattr(elt, k))
+        return elt._replace(**m) 
+    def __iter__(self):
+        return itertools.imap(self.map, self.stream)
                
 class TypeDetect(Babe):
     
@@ -137,7 +154,8 @@ class MetaInfo(object):
     
 if __name__ == "__main__": 
     babe = Babe()
-    babe.pull('../tests/test.csv', name='Test').typedetect().map('foo', lambda x : -x).sort('foo').push('../tests/test2.csv')
+    a = babe.pull('../tests/test.csv', name='Test').typedetect()
+    a.map('foo', lambda x : -x).multimap({'bar' : lambda x : x + 1, 'f' : lambda f : f / 2 }).sort('foo').push('../tests/test2.csv')
     
         
         
