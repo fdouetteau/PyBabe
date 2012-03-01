@@ -27,6 +27,9 @@ class Babe(object):
         "Create a stream where integer/floats are automatically detected"
         return TypeDetect(self)
         
+    def sort(self, key):
+        return Sort(self, key)
+        
     def push(self, resource, format=None, **kwards):
         metainfo = None
         writer = None
@@ -44,6 +47,24 @@ class Babe(object):
             else:
                 writer.writerow(list(k))
                 
+class Sort(Babe):
+    def __init__(self, stream, key):
+        self.stream = stream
+        self.key = key
+        self.buffer = []
+    def __iter__(self):
+        count = 0
+        for elt in self.stream:
+            if isinstance(elt, MetaInfo):
+                yield elt
+            else:
+                self.buffer.append((getattr(elt, self.key), count, elt))
+                count = count + 1
+        self.buffer.sort()
+        for (k, c, elt) in self.buffer:
+            yield elt
+            
+
 class Map(Babe):
     def __init__(self, f, column, stream):
         self.f = f
@@ -96,13 +117,14 @@ class CSVPull(Babe):
         yield metainfo
         for row in r:
             yield t._make(row)
+            
         
 class MetaInfo(object): 
     pass
     
 if __name__ == "__main__": 
     babe = Babe()
-    babe.pull('../tests/test.csv', name='Test').typedetect().map('foo', lambda x : x + 30).push('../tests/test2.csv')
+    babe.pull('../tests/test.csv', name='Test').typedetect().map('foo', lambda x : -x).sort('foo').push('../tests/test2.csv')
     
         
         
