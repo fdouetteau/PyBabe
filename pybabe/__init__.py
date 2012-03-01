@@ -3,6 +3,7 @@ import csv
 from collections import namedtuple
 import itertools
 import re
+from timeparse import parse_date, parse_datetime
 
 class Babe(object):
     def pull(self, resource, name, format=None, **kwargs):
@@ -76,7 +77,15 @@ class Map(Babe):
                self.stream)
                
 class TypeDetect(Babe):
-    pattern = re.compile(r'((?P<int>[0-9]+)|(?P<float>[0-9]+\.[0-9]+))$')
+    
+    patterns = [r'(?P<int>[0-9]+)', 
+         r'(?P<float>[0-9]+\.[0-9]+)',
+         r'(?P<date>\d{2,4}/\d\d/\d\d|\d\d/\d\d/\d\d{2,4})', 
+         r'(?P<datetime>\d\d/\d\d/\d\d{2,4} \d{2}:\d{2})'
+        ]
+         
+    
+    pattern = re.compile('(' + '|'.join(patterns) + ')$')
     
     def __init__(self, stream):
         self.stream = stream
@@ -96,6 +105,10 @@ class TypeDetect(Babe):
                         self.d[t] = int(v)
                     elif g.group('float'):
                         self.d[t] = float(v)
+                    elif g.group('date'):
+                        self.d[t] = parse_date(v)
+                    elif g.group('datetime'):
+                        self.d[t] = parse_datetime(v)
             if len(self.d) > 0:
                 return elt._replace(**self.d)
             else:
