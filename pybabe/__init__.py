@@ -2,10 +2,7 @@
 import csv 
 from collections import namedtuple
 import itertools
-
-
-
-
+import re
 
 class Babe(object):
     def pull(self, resource, name, format=None, **kwargs):
@@ -25,6 +22,10 @@ class Babe(object):
   
     def map(self, column,  f ):
         return Map(f, column, self)
+        
+    def typedetect(self):
+        "Create a stream where integer/floats are automatically detected"
+        return TypeDetect(self)
         
     def push(self, resource, format=None, **kwards):
         metainfo = None
@@ -53,6 +54,32 @@ class Map(Babe):
                lambda elt : elt._replace(**{self.column : self.f(getattr(elt, self.column))}) if not isinstance(elt, MetaInfo) else elt,
                self.stream)
                
+class TypeDetect(Babe):
+    pattern = re.compile(r'((?P<int>[0-9]+)|(?P<float>[0-9]+\.[0-9]+))$')
+    
+    def __init__(self, stream):
+        self.stream = stream
+        self.d = {}
+    def __iter__(self):
+        return itertools.imap(self.filter, self.stream)
+    def filter(self, elt):
+        if isinstance(elt, MetaInfo):
+            return elt
+        else:
+            self.d.clear()
+            for t in elt._fields:
+                v = getattr(elt, t)
+                g = self.pattern.match(v)
+                if g: 
+                    if g.group('int'):
+                        self.d[t] = int(v)
+                    elif g.group('float'):
+                        self.d[t] = float(v)
+            if len(self.d) > 0:
+                return elt._replace(**self.d)
+            else:
+                return elt
+        
 class CSVPull(Babe):
     def __init__(self, name, stream, dialect):
         self.name = name
@@ -75,7 +102,7 @@ class MetaInfo(object):
     
 if __name__ == "__main__": 
     babe = Babe()
-    babe.pull('../tests/test.csv', name='Test').map('foo', lambda x : int(x) + 30).push('../tests/test2.csv')
+    babe.pull('../tests/test.csv', name='Test').typedetect().map('foo', lambda x : x + 30).push('../tests/test2.csv')
     
         
         
