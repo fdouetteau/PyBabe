@@ -11,6 +11,10 @@ class TestBasicFunction(unittest.TestCase):
         a = a.map('foo', lambda x : -x).multimap({'bar' : lambda x : x + 1, 'f' : lambda f : f / 2 }).sort('foo')
         a = a.groupkey('foo', int.__add__, 0, keepOriginal=True)
         a.push('tests/test2.csv')
+        
+    def test_keynormalize(self):
+        babe = Babe()
+        self.assertEqual('Payant_Gratuit', babe.keynormalize('Payant/Gratuit'))
     
 class TestExcel(unittest.TestCase):
     

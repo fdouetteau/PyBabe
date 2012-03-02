@@ -52,6 +52,11 @@ class Babe(object):
         kr.initial_value = initial_value
         return self.group(kr, group_key=group_key, keepOriginal=keepOriginal)
 
+    def keynormalize(self, key):
+        """Normalize a column name to a valid python identifier"""
+        return '_'.join(re.findall(r'\w+',key))
+
+
     def group(self, reducer, group_key = None, keepOriginal=False):
         """Group all elements with equal value for key, assuming sorted input.
         reducer.begin_group() is called each time a new value for key 'key' is found
@@ -231,7 +236,7 @@ class CSVPull(Babe):
         metainfo = MetaInfo()
         metainfo.dialect = self.dialect
         metainfo.names = names
-        t = namedtuple(self.name, names)
+        t = namedtuple(self.name, map(self.keynormalize,names))
         yield metainfo
         for row in r:
             yield t._make(row)
@@ -246,7 +251,7 @@ class ExcelPull(Babe):
         names = [str(cell.internal_value).strip() for cell in names_row]
         metainfo = MetaInfo()
         metainfo.names = names
-        t = namedtuple(self.name, names)
+        t = namedtuple(self.name, map(self.keynormalize,names))
         yield  metainfo
         for row in it: # it brings a new method: iter_rows()
             yield t._make([cell.internal_value for cell in row])
