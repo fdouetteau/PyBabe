@@ -263,16 +263,7 @@ class KeyReducer(object):
         self.value = self.reduce(self.value, getattr(row, self.key))
     def group_result(self):
         return self.last_row._replace(**{self.key: self.value})
-        
-if __name__ == "__main__": 
-    babe = Babe()
-    a = babe.pull('../tests/test.csv', name='Test').typedetect()
-    a = a.map('foo', lambda x : -x).multimap({'bar' : lambda x : x + 1, 'f' : lambda f : f / 2 }).sort('foo')
-    a = a.groupkey('foo', int.__add__, 0, keepOriginal=True)
-    a.push('../tests/test2.csv')
-    b = babe.pull('../tests/test.xlsx', name='Test2').typedetect()
-    b = b.map('Foo', lambda x : -x)
-    b.push('../tests/test2.xlsx')
+
     
         
         
