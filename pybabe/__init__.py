@@ -252,8 +252,7 @@ class ExcelPull(Babe):
             yield t._make([cell.internal_value for cell in row])
         
 class MetaInfo(object): 
-    pass
-
+    dialect = None
 
 class KeyReducer(object):
     def begin_group(self):
@@ -263,7 +262,3 @@ class KeyReducer(object):
         self.value = self.reduce(self.value, getattr(row, self.key))
     def group_result(self):
         return self.last_row._replace(**{self.key: self.value})
-
-    
-        
-        
