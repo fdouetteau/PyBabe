@@ -16,6 +16,12 @@ class TestBasicFunction(unittest.TestCase):
         babe = Babe()
         self.assertEqual('Payant_Gratuit', babe.keynormalize('Payant/Gratuit'))
     
+class TestZip(unittest.TestCase):
+    def test_zip(self):
+        babe = Babe()
+        a = babe.pull('tests/test.csv', name='Test')
+        a.push('tests/test.zip')
+    
 class TestExcel(unittest.TestCase):
     
     def test_excel_read_write(self):

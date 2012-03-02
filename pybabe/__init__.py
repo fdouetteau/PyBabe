@@ -4,6 +4,9 @@ from collections import namedtuple
 import itertools
 import re
 from timeparse import parse_date, parse_datetime
+from tempfile import NamedTemporaryFile
+from zipfile import ZipFile 
+import os
 
 class Babe(object):
     def pull(self, resource, name, format=None, **kwargs):
@@ -88,11 +91,12 @@ class Babe(object):
                     ws.append(list(k))
             wb.save(resource)
         elif isinstance(resource, str):
-            outstream = open(resource, 'wb')
-        else:
-            raise Exception()
-        
-        if outstream:
+            
+            if resource.endswith('.zip'):
+                outstream = NamedTemporaryFile()
+            else:
+                outstream = open(resource, 'wb')
+            
             for k in self: 
                 if isinstance(k, MetaInfo):
                     metainfo = k
@@ -100,7 +104,12 @@ class Babe(object):
                     writer.writerow(metainfo.names)
                 else:
                     writer.writerow(list(k))
-                
+            outstream.flush()
+            if resource.endswith('.zip'):
+                with ZipFile(resource, 'w') as myzip:
+                    myzip.write(outstream.name, os.path.basename(resource)[:-4]+'.csv')
+            outstream.close()
+            
 class Sort(Babe):
     def __init__(self, stream, key):
         self.stream = stream
