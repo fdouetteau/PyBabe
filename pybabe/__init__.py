@@ -5,8 +5,6 @@ import itertools
 import re
 from timeparse import parse_date, parse_datetime
 
-
-
 class Babe(object):
     def pull(self, resource, name, format=None, **kwargs):
         ## Open File
@@ -14,7 +12,13 @@ class Babe(object):
         if hasattr(resource,'read'): 
             stream = resource
         elif isinstance(resource, str): 
-            stream = open(resource, 'rb')
+            if resource.endswith('.xlsx'):
+                from openpyxl import load_workbook
+                wb = load_workbook(filename =resource, use_iterators = True)
+                ws = wb.get_active_sheet() # ws is now an IterableWorksheet
+                return ExcelPull(name, ws) 
+            else:
+                stream = open(resource, 'rb')
         sniff_read = stream.readline()
         stream.seek(0)
         try:
@@ -64,19 +68,33 @@ class Babe(object):
     def push(self, resource, format=None, **kwards):
         metainfo = None
         writer = None
+        outstream = None
         if hasattr(resource, 'write'): 
             outstream = resource
+        elif isinstance(resource, str) and resource.endswith('.xlsx'):
+            from openpyxl import Workbook
+            wb = Workbook(optimized_write = True)
+            ws = wb.create_sheet()
+            for k in self:
+                if isinstance(k, MetaInfo):
+                    metainfo = k
+                    ws.append(metainfo.names)
+                else:
+                    ws.append(list(k))
+            wb.save(resource)
         elif isinstance(resource, str):
             outstream = open(resource, 'wb')
         else:
             raise Exception()
-        for k in self: 
-            if isinstance(k, MetaInfo):
-                metainfo = k
-                writer = csv.writer(outstream, metainfo.dialect)
-                writer.writerow(metainfo.names)
-            else:
-                writer.writerow(list(k))
+        
+        if outstream:
+            for k in self: 
+                if isinstance(k, MetaInfo):
+                    metainfo = k
+                    writer = csv.writer(outstream, metainfo.dialect)
+                    writer.writerow(metainfo.names)
+                else:
+                    writer.writerow(list(k))
                 
 class Sort(Babe):
     def __init__(self, stream, key):
@@ -184,6 +202,8 @@ class TypeDetect(Babe):
             self.d.clear()
             for t in elt._fields:
                 v = getattr(elt, t)
+                if not isinstance(v, str):
+                    continue
                 g = self.pattern.match(v)
                 if g: 
                     if g.group('int'):
@@ -216,6 +236,20 @@ class CSVPull(Babe):
         for row in r:
             yield t._make(row)
             
+class ExcelPull(Babe):
+    def __init__(self, name, ws):
+        self.name = name
+        self.ws = ws
+    def __iter__(self):
+        it = self.ws.iter_rows()
+        names_row = it.next()
+        names = [str(cell.internal_value).strip() for cell in names_row]
+        metainfo = MetaInfo()
+        metainfo.names = names
+        t = namedtuple(self.name, names)
+        yield  metainfo
+        for row in it: # it brings a new method: iter_rows()
+            yield t._make([cell.internal_value for cell in row])
         
 class MetaInfo(object): 
     pass
@@ -236,6 +270,9 @@ if __name__ == "__main__":
     a = a.map('foo', lambda x : -x).multimap({'bar' : lambda x : x + 1, 'f' : lambda f : f / 2 }).sort('foo')
     a = a.groupkey('foo', int.__add__, 0, keepOriginal=True)
     a.push('../tests/test2.csv')
+    b = babe.pull('../tests/test.xlsx', name='Test2').typedetect()
+    b = b.map('Foo', lambda x : -x)
+    b.push('../tests/test2.xlsx')
     
         
         
