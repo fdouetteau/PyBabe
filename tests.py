@@ -3,6 +3,7 @@ from pybabe import Babe
 import unittest
 from stubserver import FTPStubServer
 import random
+from cStringIO import StringIO
 
 class TestBasicFunction(unittest.TestCase):
     def test_pull_push(self):
@@ -20,6 +21,20 @@ class TestBasicFunction(unittest.TestCase):
         babe = Babe()
         a = babe.pull_command(['/bin/ls', '-1', '.'], 'ls', ['filename'])
         a.push(filename='tests/ls.csv')
+        
+    def test_log(self):
+        buf = StringIO()
+        buf2 = StringIO()
+        babe = Babe()
+        a = babe.pull('tests/test.csv', name='Test')
+        a = a.log(stream=buf)
+        a.push(stream=buf2, format='csv')
+        s = """foo	bar	f	d
+1	2	3.2	2010/10/02
+3	4	1.2	2011/02/02
+"""
+        self.assertEqual(s, buf.getvalue())
+        self.assertEqual(s, buf2.getvalue())
         
 class TestZip(unittest.TestCase):
     def test_zip(self):

@@ -67,6 +67,10 @@ class Babe(object):
             if dialect.delimiter.isalpha():
                 # http://bugs.python.org/issue2078
                 return LinePull(name, names, sniff_read, stream)
+            if sniff_read.endswith('\r\n'):
+                dialect.lineterminator = '\r\n'
+            else:
+                dialect.lineterminator = '\n'
         except:
             raise Exception ()
         return CSVPull(name, names, sniff_read, stream, dialect)
@@ -113,6 +117,11 @@ class Babe(object):
             return GroupAll(self, reducer, keepOriginal)
         else:
             return Group(self, group_key, reducer, keepOriginal)
+            
+    def log(self, stream = None, filename=None):
+        "Log intermediate content into a file, for debugging purpoposes"
+        return Log(self, stream, filename)
+        
             
     def push(self, filename=None, stream = None, format=None, encoding=None, protocol=None, compress=None, **kwargs):
         metainfo = None
@@ -207,6 +216,27 @@ class Babe(object):
             ftp.quit()
         if not stream: # Close stream unless provided from the outside. 
             outstream.close()
+
+class Log(Babe):
+    def __init__(self, stream, logstream, filename):
+        self.stream = stream
+        if logstream:
+            self.logstream = logstream
+            self.do_close = False
+        else:
+            self.logstream = open(filename, 'wb')
+            self.do_close = True
+    
+    def __iter__(self):
+        for row in self.stream:
+            if isinstance(row, MetaInfo):
+                writer = csv.writer(self.logstream, row.dialect)
+                writer.writerow(row.names)
+            else:
+                writer.writerow(list(row))
+            yield row
+        if self.do_close:
+            self.logstream.close()
 
 class CharsetCleanupReader(codecs.StreamReader):
     def decode(self, input, errors='strict'):   
