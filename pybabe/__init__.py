@@ -7,9 +7,15 @@ from timeparse import parse_date, parse_datetime
 from tempfile import NamedTemporaryFile
 from zipfile import ZipFile 
 import os
+from subprocess import Popen, PIPE
+from cStringIO import StringIO
 
 class Babe(object):
-    def pull(self, resource, name, format=None, **kwargs):
+    
+    def pull_command(self, command, name, names, inp=None):
+        return PullCommand(command, name, names, inp) 
+        
+    def pull(self, resource, name, names = None, format=None, **kwargs):
         ## Open File
         stream = None
         if hasattr(resource,'read'): 
@@ -19,16 +25,21 @@ class Babe(object):
                 from openpyxl import load_workbook
                 wb = load_workbook(filename =resource, use_iterators = True)
                 ws = wb.get_active_sheet() # ws is now an IterableWorksheet
-                return ExcelPull(name, ws) 
+                return ExcelPull(name, names, ws) 
             else:
                 stream = open(resource, 'rb')
+        return self._pull_stream(stream, name, names)
+        
+    def _pull_stream(self, stream, name, names):
         sniff_read = stream.readline()
-        stream.seek(0)
         try:
             dialect = csv.Sniffer().sniff(sniff_read)
+            if dialect.delimiter.isalpha():
+                # http://bugs.python.org/issue2078
+                return LinePull(name, names, sniff_read, stream)
         except:
             raise Exception ()
-        return CSVPull(name, stream, dialect)
+        return CSVPull(name, names, sniff_read, stream, dialect)
   
     def map(self, column,  f):
         return Map(f, column, self)
@@ -109,6 +120,20 @@ class Babe(object):
                 with ZipFile(resource, 'w') as myzip:
                     myzip.write(outstream.name, os.path.basename(resource)[:-4]+'.csv')
             outstream.close()
+
+class PullCommand(Babe):
+    def __init__(self, command, name, names, input):
+        self.command = command
+        self.name = name
+        self.input = input
+        self.names = names 
+    def __iter__(self):
+        p = Popen(self.command, stdin=PIPE, stdout=PIPE, stderr=None)
+        if self.input:
+            p.stdin.write(input)
+        i = self._pull_stream(p.stdout,self.name, self.names)
+        for k in i:
+            yield k 
             
 class Sort(Babe):
     def __init__(self, stream, key):
@@ -233,41 +258,83 @@ class TypeDetect(Babe):
             else:
                 return elt
         
+class LinePull(Babe):
+    def __init__(self, name, names, sniff_read, stream):
+        self.name = name
+        self.names = names
+        self.sniff_read = sniff_read
+        self.stream = stream
+    def __iter__(self):
+        if self.names:
+            t = namedtuple(self.name, map(self.keynormalize, self.names))
+            metainfo = MetaInfo(names=self.names)
+            yield metainfo
+        
+        if self.sniff_read:
+            if not metainfo: 
+                t = namedtuple(self.name, [self.keynormalize(self.sniff_read)])
+                metainfo = MetaInfo(names=[self.sniff_read])
+                yield metainfo
+            else:
+                yield t._make([self.sniff_read.rstrip('\r\n')])
+        for row in self.stream:
+            yield t._make([row.rstrip('\r\n')])
+            
 class CSVPull(Babe):
-    def __init__(self, name, stream, dialect):
+    def __init__(self, name, names, sniff_read, stream, dialect):
         self.name = name
         self.stream = stream
         self.dialect = dialect
+        self.names = names
+        self.sniff_read = sniff_read
     def __iter__(self):
+        t = None
+        if self.names:
+            normalize_names = map(self.keynormalize, self.names)
+            metainfo = MetaInfo(dialect=self.dialect, names=self.names)
+            t = namedtuple(self.name, normalize_names)
+            yield metainfo
+            
+        if self.sniff_read:
+            row = csv.reader(StringIO(self.sniff_read), self.dialect).next()
+            if t:
+                print self.sniff_read, row, self.dialect
+                yield t._make(row)
+            else:
+                normalize_names = [self.keynormalize(s.strip()) for s in row]
+                metainfo = MetaInfo()
+                metainfo.dialect = self.dialect
+                metainfo.names = row
+                t = namedtuple(self.name, normalize_names)
+                yield metainfo
         r = csv.reader(self.stream, self.dialect)
-        names  = r.next()
-        names = [s.strip() for s in names] # Normalize names
-        metainfo = MetaInfo()
-        metainfo.dialect = self.dialect
-        metainfo.names = names
-        t = namedtuple(self.name, map(self.keynormalize,names))
-        yield metainfo
         for row in r:
             yield t._make(row)
             
 class ExcelPull(Babe):
-    def __init__(self, name, ws):
+    def __init__(self, name, names, ws):
         self.name = name
         self.ws = ws
+        self.names = names
     def __iter__(self):
         it = self.ws.iter_rows()
-        names_row = it.next()
-        names = [str(cell.internal_value).strip() for cell in names_row]
-        metainfo = MetaInfo()
-        metainfo.names = names
+        names = None
+        if self.names: 
+            names = self.names
+            yield MetaInfo(names = self.names)
+        else:
+            names_row = it.next()
+            names = [cell.internal_value for cell in names_row]
+            yield MetaInfo(names=names)
         t = namedtuple(self.name, map(self.keynormalize,names))
-        yield  metainfo
         for row in it: # it brings a new method: iter_rows()
             yield t._make([cell.internal_value for cell in row])
         
 class MetaInfo(object): 
-    dialect = None
-
+    def __init__(self, dialect = None, names = None):
+        self.dialect = dialect
+        self.names = names
+        
 class KeyReducer(object):
     def begin_group(self):
         self.value = self.initial_value

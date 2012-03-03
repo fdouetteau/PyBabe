@@ -1,6 +1,6 @@
 
 from pybabe import Babe
-
+from cStringIO import StringIO
 import unittest
 
 class TestBasicFunction(unittest.TestCase):
@@ -16,6 +16,12 @@ class TestBasicFunction(unittest.TestCase):
         babe = Babe()
         self.assertEqual('Payant_Gratuit', babe.keynormalize('Payant/Gratuit'))
     
+    def test_pull_process(self):
+        babe = Babe()
+        a = babe.pull_command(['/bin/ls', '-1', '.'], 'ls', ['filename'])
+        buf = StringIO()
+        a.push('tests/ls.csv')
+        
 class TestZip(unittest.TestCase):
     def test_zip(self):
         babe = Babe()
