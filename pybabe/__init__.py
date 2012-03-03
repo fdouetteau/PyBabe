@@ -10,26 +10,55 @@ import os
 from subprocess import Popen, PIPE
 from cStringIO import StringIO
 import codecs
+from encoding_cleaner import cleanup_overencoded_string
 
 class Babe(object):
     
     def pull_command(self, command, name, names, inp=None):
         return PullCommand(command, name, names, inp) 
         
-    def pull(self, resource, name, names = None, format=None, **kwargs):
-        ## Open File
-        stream = None
-        if hasattr(resource,'read'): 
-            stream = resource
-        elif isinstance(resource, str): 
-            if resource.endswith('.xlsx'):
-                from openpyxl import load_workbook
-                wb = load_workbook(filename =resource, use_iterators = True)
-                ws = wb.get_active_sheet() # ws is now an IterableWorksheet
-                return ExcelPull(name, names, ws) 
-            else:
-                stream = open(resource, 'rb')
-        return self._pull_stream(stream, name, names)
+    def pull(self, filename = None, stream = None, name = None, names = None, format=None, encoding=None, utf8_cleanup=False, **kwargs):
+        if filename: 
+            fileBaseName, fileExtension = os.path.splitext(filename) 
+            fileExtension = fileExtension.lower()
+            if len(fileExtension) > 0:
+                fileExtension = fileExtension[1:]
+                    
+        if not format and fileExtension:
+            if fileExtension in ['xlsx', 'csv', 'tsv']:
+                format = fileExtension 
+            else: 
+                raise Exception("Unable to guess format") 
+        
+        if not format: 
+            raise Exception("Unable to guess format")
+        
+        if not format in ['xlsx', 'csv']:
+            raise Exception('Unsupported format %s' % format)
+        
+        if stream:
+            instream = stream
+        else:
+            instream = open(filename, 'rb') 
+        
+        if format == 'xlsx':
+            from openpyxl import load_workbook
+            wb = load_workbook(filename=instream, use_iterators=True)
+            ws = wb.get_active_sheet()
+            return ExcelPull(name, names, ws)
+            
+        if utf8_cleanup:
+            if encoding and encoding != 'utf8':
+                raise Exception('utf8_cleanup only possible with utf8 encoded files')
+            instream = CharsetCleanupReader(instream)
+        elif encoding:
+            c = codecs.getreader(encoding)
+            instream = c(instream)
+        
+        if format == 'csv':
+            return self._pull_stream(instream, name, names)
+        
+        
         
     def _pull_stream(self, stream, name, names):
         sniff_read = stream.readline()
@@ -178,6 +207,10 @@ class Babe(object):
             ftp.quit()
         if not stream: # Close stream unless provided from the outside. 
             outstream.close()
+
+class CharsetCleanupReader(codecs.StreamReader):
+    def decode(self, input, errors='strict'):   
+        return (cleanup_overencoded_string(input), len(input))
 
 class PullCommand(Babe):
     def __init__(self, command, name, names, input):

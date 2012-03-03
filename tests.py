@@ -51,6 +51,12 @@ class TestCharset(unittest.TestCase):
         babe = Babe()
         a = babe.pull('tests/test.csv', name='Test')
         a.push(filename='tests/test_utf16.csv', encoding='utf_16')
+        
+    def test_cleanup(self):
+        babe = Babe()
+        a = babe.pull('tests/test_badencoded.csv', utf8_cleanup=True, name='Test')
+        a.push(filename='tests/test_badencoded_out.csv')
+        
     
 class TestExcel(unittest.TestCase):
     
