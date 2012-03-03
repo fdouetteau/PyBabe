@@ -9,6 +9,7 @@ from zipfile import ZipFile
 import os
 from subprocess import Popen, PIPE
 from cStringIO import StringIO
+import codecs
 
 class Babe(object):
     
@@ -84,10 +85,11 @@ class Babe(object):
         else:
             return Group(self, group_key, reducer, keepOriginal)
             
-    def push(self, resource, format=None, **kwards):
+    def push(self, resource, format=None, encoding=None, **kwargs):
         metainfo = None
         writer = None
         outstream = None
+        stream_to_close = None
         if hasattr(resource, 'write'): 
             outstream = resource
         elif isinstance(resource, str) and resource.endswith('.xlsx'):
@@ -102,11 +104,15 @@ class Babe(object):
                     ws.append(list(k))
             wb.save(resource)
         elif isinstance(resource, str):
-            
             if resource.endswith('.zip'):
                 outstream = NamedTemporaryFile()
             else:
                 outstream = open(resource, 'wb')
+            stream_to_close = outstream
+            
+            if encoding:
+                c = codecs.getwriter(encoding)
+                outstream = c(outstream)
             
             for k in self: 
                 if isinstance(k, MetaInfo):
@@ -119,7 +125,8 @@ class Babe(object):
             if resource.endswith('.zip'):
                 with ZipFile(resource, 'w') as myzip:
                     myzip.write(outstream.name, os.path.basename(resource)[:-4]+'.csv')
-            outstream.close()
+            if stream_to_close:
+                stream_to_close.close()
 
 class PullCommand(Babe):
     def __init__(self, command, name, names, input):

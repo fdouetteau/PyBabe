@@ -27,6 +27,12 @@ class TestZip(unittest.TestCase):
         babe = Babe()
         a = babe.pull('tests/test.csv', name='Test')
         a.push('tests/test.zip')
+        
+class TestCharset(unittest.TestCase):
+    def test_writeutf16(self):
+        babe = Babe()
+        a = babe.pull('tests/test.csv', name='Test')
+        a.push('tests/test_utf16.csv', encoding='utf_16')
     
 class TestExcel(unittest.TestCase):
     
