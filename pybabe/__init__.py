@@ -4,7 +4,7 @@ from collections import namedtuple
 import itertools
 import re
 from timeparse import parse_date, parse_datetime
-from tempfile import NamedTemporaryFile
+import tempfile
 from zipfile import ZipFile 
 import os
 from subprocess import Popen, PIPE
@@ -85,14 +85,57 @@ class Babe(object):
         else:
             return Group(self, group_key, reducer, keepOriginal)
             
-    def push(self, resource, format=None, encoding=None, **kwargs):
+    def push(self, filename=None, stream = None, format=None, encoding=None, protocol=None, compress=None, **kwargs):
         metainfo = None
         writer = None
         outstream = None
-        stream_to_close = None
-        if hasattr(resource, 'write'): 
-            outstream = resource
-        elif isinstance(resource, str) and resource.endswith('.xlsx'):
+        compress_format = None
+        if filename: 
+            fileBaseName, fileExtension = os.path.splitext(filename) 
+            fileExtension = fileExtension.lower()
+            if len(fileExtension) > 0:
+                fileExtension = fileExtension[1:]
+        
+        if not format and fileExtension:
+            if fileExtension in ['xlsx', 'csv', 'tsv']:
+                format = fileExtension 
+            else: 
+                raise Exception("Unable to guess format") 
+                
+        if not format: 
+            raise Exception("Unable to guess format")
+        
+        if not format in ['xlsx', 'csv']:
+            raise Exception('Unsupported format %s' % format) 
+                    
+        if compress: 
+            compress_baseName, compress_fileExtension = os.path.splitext(compress) 
+            compress_fileExtension = compress_fileExtension.lower()
+            if compress_fileExtension in ['zip']: 
+                compress_format = compress_fileExtension 
+                
+        if not protocol:
+            protocol = 'file'
+        
+        if not (protocol in ['file', 'ftp']):
+            raise Exception('Unsupported protocol %s' % protocol)
+
+        # If external protocol or compression, write to a temporary file. 
+        if protocol is not "file" or compress:
+            outstream = tempfile.NamedTemporaryFile()
+        elif stream: 
+            outstream = stream
+        else: 
+            outstream = open(filename, 'wb')
+            
+        if encoding:
+            if not (format in ['csv', 'tsv']): 
+                raise Exception('Invalid encoding %s for format %s' % (encoding, format)) 
+            c = codecs.getwriter(encoding)
+            outstream = c(outstream)
+        
+        # Actually write the file. 
+        if format == 'xlsx':
             from openpyxl import Workbook
             wb = Workbook(optimized_write = True)
             ws = wb.create_sheet()
@@ -102,18 +145,8 @@ class Babe(object):
                     ws.append(metainfo.names)
                 else:
                     ws.append(list(k))
-            wb.save(resource)
-        elif isinstance(resource, str):
-            if resource.endswith('.zip'):
-                outstream = NamedTemporaryFile()
-            else:
-                outstream = open(resource, 'wb')
-            stream_to_close = outstream
-            
-            if encoding:
-                c = codecs.getwriter(encoding)
-                outstream = c(outstream)
-            
+            wb.save(outstream)
+        elif format == 'csv':
             for k in self: 
                 if isinstance(k, MetaInfo):
                     metainfo = k
@@ -121,12 +154,30 @@ class Babe(object):
                     writer.writerow(metainfo.names)
                 else:
                     writer.writerow(list(k))
-            outstream.flush()
-            if resource.endswith('.zip'):
-                with ZipFile(resource, 'w') as myzip:
-                    myzip.write(outstream.name, os.path.basename(resource)[:-4]+'.csv')
-            if stream_to_close:
-                stream_to_close.close()
+        outstream.flush()
+        
+        # Apply file compression
+        if compress_format == "zip": 
+            if protocol != 'file':
+                compress_file = tempfile.NamedTemporaryFile()
+            else:
+                compress_file = compress
+            with ZipFile(compress_file, 'w') as myzip:
+                myzip.write(filename, outstream.name)
+            filename = compress
+            outstream.close()
+            outstream = compress_file
+            
+        # Apply protocol 
+        if protocol == 'ftp': 
+            from ftplib import FTP
+            ftp = FTP()
+            ftp.connect(kwargs['host'], kwargs.get('port', None))
+            ftp.login(kwargs.get('login', None), kwargs.get('password', None))
+            ftp.storbinary('STOR %s' % filename, open(outstream.name, 'rb'))
+            ftp.quit()
+        if not stream: # Close stream unless provided from the outside. 
+            outstream.close()
 
 class PullCommand(Babe):
     def __init__(self, command, name, names, input):
