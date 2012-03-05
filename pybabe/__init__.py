@@ -177,7 +177,7 @@ class Babe(object):
             from ftplib import FTP
             ftp = FTP()
             ftp.connect(kwargs['host'], kwargs.get('port', None))
-            ftp.login(kwargs.get('login', None), kwargs.get('password', None))
+            ftp.login(kwargs.get('user', None), kwargs.get('password', None))
             ftp.quit()
 
         # If external protocol or compression, write to a temporary file. 
