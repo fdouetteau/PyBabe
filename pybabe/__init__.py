@@ -173,6 +173,13 @@ class Babe(object):
         if not (protocol in ['file', 'ftp']):
             raise Exception('Unsupported protocol %s' % protocol)
 
+        if protocol == 'ftp':  # Fail fast for FTP. 
+            from ftplib import FTP
+            ftp = FTP()
+            ftp.connect(kwargs['host'], kwargs.get('port', None))
+            ftp.login(kwargs.get('login', None), kwargs.get('password', None))
+            ftp.quit()
+
         # If external protocol or compression, write to a temporary file. 
         if protocol is not "file" or compress:
             outstream = tempfile.NamedTemporaryFile()
