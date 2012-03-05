@@ -13,7 +13,7 @@ import codecs
 
 class Babe(object):
     
-    def pull_command(self, command, name, names, inp=None, utf8_cleanup = None, encoding=None):
+    def pull_command(self, command, name, names=None, inp=None, utf8_cleanup = None, encoding=None):
         return PullCommand(command, name, names, inp, utf8_cleanup, encoding) 
         
     def pull(self, filename = None, stream = None, name = None, names = None, format=None, encoding=None, utf8_cleanup=False, **kwargs):
@@ -271,26 +271,35 @@ class Log(Babe):
 class CharsetCleanupReader(codecs.StreamReader):
     def __init__(self, stream):
         codecs.StreamReader.__init__(self, stream)
-        from encoding_cleaner import cleanup_overencoded_string
-        self.f = cleanup_overencoded_string 
-    def decode(self, input, errors='strict'):   
-        return (self.f(input), len(input))
+        from encoding_cleaner import get_map_table
+        #self.f = cleanup_overencoded_string 
+        self.udecoder = codecs.getincrementaldecoder('utf8')()
+        self.map = get_map_table('utf8', 'latin1')
+    def decode(self, input, errors='strict'):
+        u = self.udecoder.decode(input)
+        tu = self.map[0].sub(lambda g: self.map[1][g.group(0)], u)
+        return (tu.encode('utf8'), len(input))
 
 class PullCommand(Babe):
-    def __init__(self, command, name, names, input, utf8_cleanup, encoding):
+    def __init__(self, command, name, names, inp, utf8_cleanup, encoding):
         self.command = command
         self.name = name
-        self.input = input
+        self.inp = inp
         self.names = names 
         self.utf8_cleanup = utf8_cleanup
         self.encoding = encoding
     def __iter__(self):
         p = Popen(self.command, stdin=PIPE, stdout=PIPE, stderr=None)
-        if self.input:
-            p.stdin.write(input)
+        if self.inp:
+            p.stdin.write(self.inp)
+        p.stdin.close()
         i = self._pull_stream(p.stdout,self.name, self.names, self.utf8_cleanup, self.encoding)
         for k in i:
-            yield k 
+            yield k
+        p.wait()
+        if p.returncode != 0: 
+            raise Exception("Mysql Process error ")
+        
             
 class Sort(Babe):
     def __init__(self, stream, key):
