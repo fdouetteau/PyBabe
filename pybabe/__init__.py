@@ -468,7 +468,6 @@ class CSVPull(Babe):
         if self.sniff_read:
             row = csv.reader(StringIO(self.sniff_read), self.dialect).next()
             if t:
-                print self.sniff_read, row, self.dialect
                 yield t._make(row)
             else:
                 normalize_names = [self.keynormalize(s.strip()) for s in row]
@@ -498,8 +497,6 @@ class ExcelPull(Babe):
             yield MetaInfo(names=names)
         t = namedtuple(self.name, map(self.keynormalize,names))
         for row in it: # it brings a new method: iter_rows()
-            for cell in row:
-                print cell
             yield t._make(map(self.valuenormalize, row))
         
     def valuenormalize(self, cell):
