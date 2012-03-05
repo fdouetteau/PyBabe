@@ -78,6 +78,10 @@ class Babe(object):
     def map(self, column,  f):
         return Map(f, column, self)
         
+    def head(self, n):
+        """Keep the first n lines"""
+        return Head(self, n)
+        
     def augment(self, function, names, name=None):
         """
         Create a new stream that augment an existing stream by addind new colums to it
@@ -227,6 +231,21 @@ class Babe(object):
             ftp.quit()
         if not stream: # Close stream unless provided from the outside. 
             outstream.close()
+
+class Head(Babe):
+    def __init__(self, stream, n):
+        self.stream = stream 
+        self.n = n
+    def __iter__(self):
+        n = self.n
+        for row in self.stream: 
+            if isinstance(row, MetaInfo):
+                count = 0 
+            else: 
+                if count >= n: 
+                    break
+                count = count + 1
+            yield row
 
 class Log(Babe):
     def __init__(self, stream, logstream, filename):
