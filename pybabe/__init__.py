@@ -339,7 +339,7 @@ class Augment(Babe):
         for k in self.stream: 
             if isinstance(k, MetaInfo):
                 info = MetaInfo(names=k.names + self.names, name=self.name if self.name else k.name, dialect=k.dialect) 
-                t = namedtuple(info.name, info.names)
+                t = namedtuple(info.name, map(self.keynormalize, info.names))
                 yield info
             else: 
                 k2 = t._make(list(k) + self.function(k))
@@ -479,7 +479,15 @@ class ExcelPull(Babe):
             yield MetaInfo(names=names)
         t = namedtuple(self.name, map(self.keynormalize,names))
         for row in it: # it brings a new method: iter_rows()
-            yield t._make([cell.internal_value for cell in row])
+            for cell in row:
+                print cell
+            yield t._make(map(self.valuenormalize, row))
+        
+    def valuenormalize(self, cell):
+        if cell.number_format == '0': 
+            return int(cell.internal_value)
+        else: 
+            return cell.internal_value
         
 class MetaInfo(object): 
     def __init__(self, dialect = None, name=None, names = None):
