@@ -18,6 +18,7 @@ class Babe(object):
         return PullCommand(command, name, names, inp) 
         
     def pull(self, filename = None, stream = None, name = None, names = None, format=None, encoding=None, utf8_cleanup=False, **kwargs):
+        fileExtension = None
         if filename: 
             fileBaseName, fileExtension = os.path.splitext(filename) 
             fileExtension = fileExtension.lower()
@@ -128,6 +129,7 @@ class Babe(object):
         writer = None
         outstream = None
         compress_format = None
+        fileExtension = None
         if filename: 
             fileBaseName, fileExtension = os.path.splitext(filename) 
             fileExtension = fileExtension.lower()
