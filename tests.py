@@ -36,6 +36,19 @@ class TestBasicFunction(unittest.TestCase):
         self.assertEqual(s, buf.getvalue())
         self.assertEqual(s, buf2.getvalue())
         
+    def test_augment(self):
+        babe = Babe()
+        a = babe.pull('tests/test.csv', name='Test').typedetect()
+        a = a.augment(lambda o: [o.bar], name='Test2', names=['bar2'])
+        buf = StringIO()
+        a.push(stream=buf, format='csv')
+        s = buf.getvalue()
+        ss = """foo\tbar\tf\td\tbar2
+1\t2\t3.2\t2010-10-02\t2
+3\t4\t1.2\t2011-02-02\t4
+"""
+        self.assertEquals(s, ss)
+        
 class TestZip(unittest.TestCase):
     def test_zip(self):
         babe = Babe()

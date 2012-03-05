@@ -10,7 +10,6 @@ import os
 from subprocess import Popen, PIPE
 from cStringIO import StringIO
 import codecs
-from encoding_cleaner import cleanup_overencoded_string
 
 class Babe(object):
     
@@ -78,6 +77,16 @@ class Babe(object):
   
     def map(self, column,  f):
         return Map(f, column, self)
+        
+    def augment(self, function, names, name=None):
+        """
+        Create a new stream that augment an existing stream by addind new colums to it
+        names. The column names
+        name. The new name for the augmented stream. 
+        function. The function to calculate the augmented column. 
+            function(row) should return a sequence of the new values to append [value1, value2]
+        """
+        return Augment(function, names, name, self)
         
     def multimap(self, d):
         return MultiMap(self, d)
@@ -241,8 +250,12 @@ class Log(Babe):
             self.logstream.close()
 
 class CharsetCleanupReader(codecs.StreamReader):
+    def __init__(self, stream):
+        codecs.StreamReader.__init__(self, stream)
+        from encoding_cleaner import cleanup_overencoded_string
+        self.f = cleanup_overencoded_string 
     def decode(self, input, errors='strict'):   
-        return (cleanup_overencoded_string(input), len(input))
+        return (self.f(input), len(input))
 
 class PullCommand(Babe):
     def __init__(self, command, name, names, input):
@@ -315,8 +328,23 @@ class Group(Babe):
                     self.reducer.row(elt)
         if pk is not None:
             yield self.reducer.group_result()    
-                
-                    
+                        
+class Augment(Babe):
+    def __init__(self, function, names, name, stream):
+        self.function = function
+        self.names = names
+        self.name = name
+        self.stream = stream
+    def __iter__(self):
+        for k in self.stream: 
+            if isinstance(k, MetaInfo):
+                info = MetaInfo(names=k.names + self.names, name=self.name if self.name else k.name, dialect=k.dialect) 
+                t = namedtuple(info.name, info.names)
+                yield info
+            else: 
+                k2 = t._make(list(k) + self.function(k))
+                yield k2 
+
 class Map(Babe):
     def __init__(self, f, column, stream):
         self.f = f
@@ -390,13 +418,13 @@ class LinePull(Babe):
     def __iter__(self):
         if self.names:
             t = namedtuple(self.name, map(self.keynormalize, self.names))
-            metainfo = MetaInfo(names=self.names)
+            metainfo = MetaInfo(name=self.name, names=self.names)
             yield metainfo
         
         if self.sniff_read:
             if not metainfo: 
                 t = namedtuple(self.name, [self.keynormalize(self.sniff_read)])
-                metainfo = MetaInfo(names=[self.sniff_read])
+                metainfo = MetaInfo(name=self.name, names=[self.sniff_read])
                 yield metainfo
             else:
                 yield t._make([self.sniff_read.rstrip('\r\n')])
@@ -454,9 +482,10 @@ class ExcelPull(Babe):
             yield t._make([cell.internal_value for cell in row])
         
 class MetaInfo(object): 
-    def __init__(self, dialect = None, names = None):
+    def __init__(self, dialect = None, name=None, names = None):
         self.dialect = dialect
         self.names = names
+        self.name = name
         
 class KeyReducer(object):
     def begin_group(self):
