@@ -13,8 +13,8 @@ import codecs
 
 class Babe(object):
     
-    def pull_command(self, command, name, names, inp=None):
-        return PullCommand(command, name, names, inp) 
+    def pull_command(self, command, name, names, inp=None, utf8_cleanup = None, encoding=None):
+        return PullCommand(command, name, names, inp, utf8_cleanup, encoding) 
         
     def pull(self, filename = None, stream = None, name = None, names = None, format=None, encoding=None, utf8_cleanup=False, **kwargs):
         fileExtension = None
@@ -47,6 +47,12 @@ class Babe(object):
             ws = wb.get_active_sheet()
             return ExcelPull(name, names, ws)
             
+        if format == 'csv':
+            return self._pull_stream(instream, name, names, utf8_cleanup, encoding)
+        
+        
+        
+    def _pull_stream(self, instream, name, names, utf8_cleanup, encoding):
         if utf8_cleanup:
             if encoding and encoding != 'utf8':
                 raise Exception('utf8_cleanup only possible with utf8 encoded files')
@@ -55,25 +61,19 @@ class Babe(object):
             c = codecs.getreader(encoding)
             instream = c(instream)
         
-        if format == 'csv':
-            return self._pull_stream(instream, name, names)
-        
-        
-        
-    def _pull_stream(self, stream, name, names):
-        sniff_read = stream.readline()
+        sniff_read = instream.readline()
         try:
             dialect = csv.Sniffer().sniff(sniff_read)
             if dialect.delimiter.isalpha():
                 # http://bugs.python.org/issue2078
-                return LinePull(name, names, sniff_read, stream)
+                return LinePull(name, names, sniff_read, instream)
             if sniff_read.endswith('\r\n'):
                 dialect.lineterminator = '\r\n'
             else:
                 dialect.lineterminator = '\n'
         except:
             raise Exception ()
-        return CSVPull(name, names, sniff_read, stream, dialect)
+        return CSVPull(name, names, sniff_read, instream, dialect)
   
     def map(self, column,  f):
         return Map(f, column, self)
@@ -277,16 +277,18 @@ class CharsetCleanupReader(codecs.StreamReader):
         return (self.f(input), len(input))
 
 class PullCommand(Babe):
-    def __init__(self, command, name, names, input):
+    def __init__(self, command, name, names, input, utf8_cleanup, encoding):
         self.command = command
         self.name = name
         self.input = input
         self.names = names 
+        self.utf8_cleanup = utf8_cleanup
+        self.encoding = encoding
     def __iter__(self):
         p = Popen(self.command, stdin=PIPE, stdout=PIPE, stderr=None)
         if self.input:
             p.stdin.write(input)
-        i = self._pull_stream(p.stdout,self.name, self.names)
+        i = self._pull_stream(p.stdout,self.name, self.names, self.utf8_cleanup, self.encoding)
         for k in i:
             yield k 
             
