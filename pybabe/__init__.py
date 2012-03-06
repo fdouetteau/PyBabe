@@ -199,18 +199,21 @@ class Babe(object):
             outstream = open(filename, 'wb')
             to_close.append(outstream)
             
-            
-        if format in ['csv', 'tsv']:
-            encoding = "utf8" if not encoding else encoding 
-            c = codecs.getwriter(encoding)
-            if c == codecs.getwriter("utf8"):
-                pass # do nothing
-            else: 
-                outstream = c(outstream)                
-        else:
+#        if format in ['csv', 'tsv']:
+#            encoding = "utf8" if not encoding else encoding 
+#            c = codecs.getwriter(encoding)
+#            outstream = c(outstream)  
+#            outstream = DebugStream(outstream)
+#        else:
+#           if encoding:
+#               raise Exception('Invalid encoding %s for format %s' % (encoding, format)) 
+        
+        if format in ['csv', 'tsv']: 
+            if not encoding:
+                encoding = 'utf-8'
+        else: 
             if encoding:
-                raise Exception('Invalid encoding %s for format %s' % (encoding, format)) 
-
+                raise Exception('Invalid encoding %s for format %s' % (encoding, format))
         
         # Actually write the file. 
         if format == 'xlsx':
@@ -229,10 +232,10 @@ class Babe(object):
                 if isinstance(k, MetaInfo):
                     metainfo = k
                     writer = csv.writer(outstream, metainfo.dialect)
-                    writer.writerow(metainfo.names)
+                    writer.writerow([u.encode(encoding) if isinstance(u, unicode) else u for u in metainfo.names])
                 else:
-                    #print "WRITE ROW ", map(type, list(k)), list(k)
-                    writer.writerow(list(k))
+                    l = [u.encode(encoding) if isinstance(u, unicode) else u for u in k]
+                    writer.writerow(l)
         outstream.flush()
         
         # Apply file compression
@@ -258,6 +261,14 @@ class Babe(object):
         for s in to_close:
             s.close()
 
+class DebugStream(object):
+    def __init__(self, stream):
+        self.stream = stream 
+    def write(self, object):
+        print type(object), object
+        self.stream.write(object)
+        
+        
 class Head(Babe):
     def __init__(self, stream, n):
         self.stream = stream 
@@ -438,7 +449,7 @@ class TypeDetect(Babe):
             self.d.clear()
             for t in elt._fields:
                 v = getattr(elt, t)
-                if not isinstance(v, str):
+                if not isinstance(v, basestring):
                     continue
                 g = self.pattern.match(v)
                 if g: 
@@ -492,7 +503,7 @@ class CSVPull(Babe):
         t = namedtuple(self.name, normalize_names)
         yield metainfo
         for row in reader:
-            yield t._make(row)
+            yield t._make([unicode(x, 'utf-8') for x in row])
             
 class ExcelPull(Babe):
     def __init__(self, name, names, ws):

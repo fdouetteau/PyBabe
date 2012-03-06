@@ -7,6 +7,7 @@ import codecs
 class UTF8Recoder(object):
     """
     Iterator that reads an encoded stream and reencodes the input to UTF-8
+    Made mandatory by the csv module operating only on 'str'  
     """
     def __init__(self, f, encoding):
         self.reader = codecs.getreader(encoding)(f)
