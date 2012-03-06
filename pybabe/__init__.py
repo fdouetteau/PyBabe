@@ -10,6 +10,7 @@ import os
 from subprocess import Popen, PIPE
 from cStringIO import StringIO
 import codecs
+from charset import UTF8Recoder, UTF8RecoderWithCleanup, PrefixReader
 
 class Babe(object):
     
@@ -53,27 +54,31 @@ class Babe(object):
         
         
     def _pull_stream(self, instream, name, names, utf8_cleanup, encoding):
-        if utf8_cleanup:
-            if encoding and encoding != 'utf8':
-                raise Exception('utf8_cleanup only possible with utf8 encoded files')
-            instream = CharsetCleanupReader(instream)
-        elif encoding:
-            c = codecs.getreader(encoding)
-            instream = c(instream)
+        if not encoding:
+            encoding = 'utf8'
+            
+        if utf8_cleanup: 
+            instream = UTF8RecoderWithCleanup(instream, encoding)
+        elif codecs.getreader(encoding)  != codecs.getreader('utf-8'):
+            instream = UTF8Recoder(instream, encoding)
+        else:
+            pass
         
-        sniff_read = instream.readline()
+        sniff_read = instream.next()
+        instream = PrefixReader(sniff_read, instream)
+        #print type(sniff_read), sniff_read
         try:
             dialect = csv.Sniffer().sniff(sniff_read)
             if dialect.delimiter.isalpha():
                 # http://bugs.python.org/issue2078
-                return LinePull(name, names, sniff_read, instream)
+                return LinePull(name, names, instream)
             if sniff_read.endswith('\r\n'):
                 dialect.lineterminator = '\r\n'
             else:
                 dialect.lineterminator = '\n'
         except:
             raise Exception ()
-        return CSVPull(name, names, sniff_read, instream, dialect)
+        return CSVPull(name, names, instream, dialect)
   
     def map(self, column,  f):
         return Map(f, column, self)
@@ -143,6 +148,7 @@ class Babe(object):
         outstream = None
         compress_format = None
         fileExtension = None
+        to_close = []
         if filename: 
             fileBaseName, fileExtension = os.path.splitext(filename) 
             fileExtension = fileExtension.lower()
@@ -163,9 +169,11 @@ class Babe(object):
                     
         if compress: 
             compress_baseName, compress_fileExtension = os.path.splitext(compress) 
-            compress_fileExtension = compress_fileExtension.lower()
+            compress_fileExtension = compress_fileExtension.lower()[1:]
             if compress_fileExtension in ['zip']: 
                 compress_format = compress_fileExtension 
+            else:
+                raise Exception('Unknown exception format %s' % compress_format)
                 
         if not protocol:
             protocol = 'file'
@@ -173,26 +181,36 @@ class Babe(object):
         if not (protocol in ['file', 'ftp']):
             raise Exception('Unsupported protocol %s' % protocol)
 
-        if protocol == 'ftp':  # Fail fast for FTP. 
+        ftp = None
+        if protocol == 'ftp' and kwargs.get('ftp_early_check', True):  # Fail fast for FTP. 
             from ftplib import FTP
             ftp = FTP()
             ftp.connect(kwargs['host'], kwargs.get('port', None))
             ftp.login(kwargs.get('user', None), kwargs.get('password', None))
             ftp.quit()
-
+            
         # If external protocol or compression, write to a temporary file. 
         if protocol is not "file" or compress:
             outstream = tempfile.NamedTemporaryFile()
+            to_close.append(outstream)
         elif stream: 
             outstream = stream
         else: 
             outstream = open(filename, 'wb')
+            to_close.append(outstream)
             
-        if encoding:
-            if not (format in ['csv', 'tsv']): 
-                raise Exception('Invalid encoding %s for format %s' % (encoding, format)) 
+            
+        if format in ['csv', 'tsv']:
+            encoding = "utf8" if not encoding else encoding 
             c = codecs.getwriter(encoding)
-            outstream = c(outstream)
+            if c == codecs.getwriter("utf8"):
+                pass # do nothing
+            else: 
+                outstream = c(outstream)                
+        else:
+            if encoding:
+                raise Exception('Invalid encoding %s for format %s' % (encoding, format)) 
+
         
         # Actually write the file. 
         if format == 'xlsx':
@@ -213,6 +231,7 @@ class Babe(object):
                     writer = csv.writer(outstream, metainfo.dialect)
                     writer.writerow(metainfo.names)
                 else:
+                    #print "WRITE ROW ", map(type, list(k)), list(k)
                     writer.writerow(list(k))
         outstream.flush()
         
@@ -223,7 +242,7 @@ class Babe(object):
             else:
                 compress_file = compress
             with ZipFile(compress_file, 'w') as myzip:
-                myzip.write(filename, outstream.name)
+                myzip.write(outstream.name, filename)
             filename = compress
             outstream.close()
             outstream = compress_file
@@ -233,11 +252,11 @@ class Babe(object):
             from ftplib import FTP
             ftp = FTP()
             ftp.connect(kwargs['host'], kwargs.get('port', None))
-            ftp.login(kwargs.get('login', None), kwargs.get('password', None))
+            ftp.login(kwargs.get('user', None), kwargs.get('password', None))
             ftp.storbinary('STOR %s' % filename, open(outstream.name, 'rb'))
             ftp.quit()
-        if not stream: # Close stream unless provided from the outside. 
-            outstream.close()
+        for s in to_close:
+            s.close()
 
 class Head(Babe):
     def __init__(self, stream, n):
@@ -275,17 +294,7 @@ class Log(Babe):
         if self.do_close:
             self.logstream.close()
 
-class CharsetCleanupReader(codecs.StreamReader):
-    def __init__(self, stream):
-        codecs.StreamReader.__init__(self, stream)
-        from encoding_cleaner import get_map_table
-        #self.f = cleanup_overencoded_string 
-        self.udecoder = codecs.getincrementaldecoder('utf8')()
-        self.map = get_map_table('utf8', 'latin1')
-    def decode(self, input, errors='strict'):
-        u = self.udecoder.decode(input)
-        tu = self.map[0].sub(lambda g: self.map[1][g.group(0)], u)
-        return (tu.encode('utf8'), len(input))
+
 
 class PullCommand(Babe):
     def __init__(self, command, name, names, inp, utf8_cleanup, encoding):
@@ -447,55 +456,42 @@ class TypeDetect(Babe):
                 return elt
         
 class LinePull(Babe):
-    def __init__(self, name, names, sniff_read, stream):
+    def __init__(self, name, names, stream):
         self.name = name
         self.names = names
-        self.sniff_read = sniff_read
         self.stream = stream
     def __iter__(self):
         if self.names:
             t = namedtuple(self.name, map(self.keynormalize, self.names))
             metainfo = MetaInfo(name=self.name, names=self.names)
             yield metainfo
-        
-        if self.sniff_read:
-            if not metainfo: 
-                t = namedtuple(self.name, [self.keynormalize(self.sniff_read)])
-                metainfo = MetaInfo(name=self.name, names=[self.sniff_read])
-                yield metainfo
-            else:
-                yield t._make([self.sniff_read.rstrip('\r\n')])
+        if not metainfo:
+            row = self.stream.next()
+            row = row.rstrip('\r\n')
+            t = namedtuple(self.name, [self.keynormalize(self.sniff_read)])
+            metainfo = MetaInfo(name=self.name, names=[row])
+            yield metainfo
         for row in self.stream:
             yield t._make([row.rstrip('\r\n')])
             
 class CSVPull(Babe):
-    def __init__(self, name, names, sniff_read, stream, dialect):
+    def __init__(self, name, names, stream, dialect):
         self.name = name
         self.stream = stream
         self.dialect = dialect
         self.names = names
-        self.sniff_read = sniff_read
     def __iter__(self):
         t = None
+        reader = csv.reader(self.stream, self.dialect)        
         if self.names:
-            normalize_names = map(self.keynormalize, self.names)
-            metainfo = MetaInfo(dialect=self.dialect, names=self.names)
-            t = namedtuple(self.name, normalize_names)
-            yield metainfo
-            
-        if self.sniff_read:
-            row = csv.reader(StringIO(self.sniff_read), self.dialect).next()
-            if t:
-                yield t._make(row)
-            else:
-                normalize_names = [self.keynormalize(s.strip()) for s in row]
-                metainfo = MetaInfo()
-                metainfo.dialect = self.dialect
-                metainfo.names = row
-                t = namedtuple(self.name, normalize_names)
-                yield metainfo
-        r = csv.reader(self.stream, self.dialect)
-        for row in r:
+            names = self.names
+        else: 
+            names = reader.next()
+        normalize_names = map(self.keynormalize, names)
+        metainfo = MetaInfo(dialect=self.dialect, names=names)
+        t = namedtuple(self.name, normalize_names)
+        yield metainfo
+        for row in reader:
             yield t._make(row)
             
 class ExcelPull(Babe):
