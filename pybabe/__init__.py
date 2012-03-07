@@ -80,8 +80,8 @@ class Babe(object):
             raise Exception ()
         return CSVPull(name, names, instream, dialect)
   
-    def map(self, column,  f):
-        return Map(f, column, self)
+    def map(self, column,  function):
+        return Map(function, column, self)
         
     def head(self, n):
         """Keep the first n lines"""
@@ -413,7 +413,8 @@ class MultiMap(Babe):
             return elt
         m = {}
         for k in self.d:
-            m[k] = self.d[k](getattr(elt, k))
+            if k in self.d: 
+                m[k] = self.d[k](getattr(elt, k))
         return elt._replace(**m) 
     def __iter__(self):
         return itertools.imap(self.map, self.stream)
