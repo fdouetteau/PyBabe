@@ -100,6 +100,12 @@ class Babe(object):
     def multimap(self, d):
         return MultiMap(self, d)
         
+    def replace(self, oldvalue, newvalue, column = None):
+        """Replace old value by a new value. Apply to all columns by default. 
+        If column is specified only apply to the specified column
+        """
+        return Replace(self, oldvalue, newvalue, column)
+    
     def typedetect(self):
         "Create a stream where integer/floats are automatically detected"
         return TypeDetect(self)
@@ -261,6 +267,31 @@ class DebugStream(object):
         self.stream.write(object)
         
         
+class Replace(Babe):
+    def __init__(self, stream, oldvalue, newvalue, column):
+        self.stream = stream 
+        self.oldvalue = oldvalue
+        self.newvalue = newvalue 
+        self.column = column 
+    def __iter__(self):
+        buf = []
+        for row in self.stream:
+            if isinstance(row, MetaInfo):
+                yield row
+            else:
+                del buf[:] 
+                change = False 
+                for v in row:
+                    if v == self.oldvalue: 
+                        buf.append(self.newvalue)
+                        change = True
+                    else:
+                        buf.append(v)
+                if change:
+                    yield row._make(buf)
+                else: 
+                    yield row 
+                             
 class Head(Babe):
     def __init__(self, stream, n):
         self.stream = stream 
@@ -413,8 +444,7 @@ class MultiMap(Babe):
             return elt
         m = {}
         for k in self.d:
-            if k in self.d: 
-                m[k] = self.d[k](getattr(elt, k))
+            m[k] = self.d[k](getattr(elt, k))
         return elt._replace(**m) 
     def __iter__(self):
         return itertools.imap(self.map, self.stream)
