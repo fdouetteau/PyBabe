@@ -5,7 +5,7 @@ import itertools
 import re
 from timeparse import parse_date, parse_datetime
 import tempfile
-from zipfile import ZipFile 
+from zipfile import ZipFile, ZIP_DEFLATED
 import os
 from subprocess import Popen, PIPE
 from cStringIO import StringIO
@@ -241,7 +241,7 @@ class Babe(object):
                 compress_file = tempfile.NamedTemporaryFile()
             else:
                 compress_file = compress
-            myzip = ZipFile(compress_file, 'w')
+            myzip = ZipFile(compress_file, 'w', ZIP_DEFLATED)
             myzip.write(outstream.name, filename)
             myzip.close()
             filename = compress
