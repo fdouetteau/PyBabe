@@ -10,7 +10,7 @@ import os
 from subprocess import Popen, PIPE
 from cStringIO import StringIO
 import codecs
-from charset import UTF8Recoder, UTF8RecoderWithCleanup, PrefixReader
+from charset import UTF8Recoder, UTF8RecoderWithCleanup, PrefixReader, UnicodeCSVWriter 
 
 class Babe(object):
     
@@ -199,14 +199,6 @@ class Babe(object):
             outstream = open(filename, 'wb')
             to_close.append(outstream)
             
-#        if format in ['csv', 'tsv']:
-#            encoding = "utf8" if not encoding else encoding 
-#            c = codecs.getwriter(encoding)
-#            outstream = c(outstream)  
-#            outstream = DebugStream(outstream)
-#        else:
-#           if encoding:
-#               raise Exception('Invalid encoding %s for format %s' % (encoding, format)) 
         
         if format in ['csv', 'tsv']: 
             if not encoding:
@@ -231,11 +223,10 @@ class Babe(object):
             for k in self: 
                 if isinstance(k, MetaInfo):
                     metainfo = k
-                    writer = csv.writer(outstream, metainfo.dialect)
-                    writer.writerow([u.encode(encoding) if isinstance(u, unicode) else u for u in metainfo.names])
+                    writer = UnicodeCSVWriter(outstream, dialect=metainfo.dialect, encoding=encoding)
+                    writer.writerow(metainfo.names)
                 else:
-                    l = [u.encode(encoding) if isinstance(u, unicode) else u for u in k]
-                    writer.writerow(l)
+                    writer.writerow(list(k))
         outstream.flush()
         
         # Apply file compression
@@ -244,8 +235,9 @@ class Babe(object):
                 compress_file = tempfile.NamedTemporaryFile()
             else:
                 compress_file = compress
-            with ZipFile(compress_file, 'w') as myzip:
-                myzip.write(outstream.name, filename)
+            myzip = ZipFile(compress_file, 'w')
+            myzip.write(outstream.name, filename)
+            myzip.close()
             filename = compress
             outstream.close()
             outstream = compress_file
