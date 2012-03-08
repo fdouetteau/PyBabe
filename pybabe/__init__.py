@@ -10,11 +10,11 @@ import os
 from subprocess import Popen, PIPE
 import codecs
 from charset import UTF8Recoder, UTF8RecoderWithCleanup, PrefixReader, UnicodeCSVWriter 
-import transform
+import transform, mapreduce
 from base import BabeBase, MetaInfo, keynormalize
         
 only_to_load_1 = transform
-        
+only_to_load_2 = mapreduce
 
     
         
@@ -103,35 +103,6 @@ class Babe(BabeBase):
         "Create a stream where integer/floats are automatically detected"
         return TypeDetect(self)
         
-    def sort(self, key):
-        "Return a sorted input according to key"
-        return Sort(self, key)
-        
-    def groupkey(self, key, red, initial_value, group_key=None, keepOriginal=False):
-        """Group all elements with equal value for group_key. 
-        value = red(value, row[key]) is called for each row with equal value for group_key
-        See 'group'  
-        """
-        kr = KeyReducer()
-        kr.key = key
-        kr.reduce = red
-        kr.initial_value = initial_value
-        return self.group(kr, group_key=group_key, keepOriginal=keepOriginal)
-
-
-
-    def group(self, reducer, group_key = None, keepOriginal=False):
-        """Group all elements with equal value for key, assuming sorted input.
-        reducer.begin_group() is called each time a new value for key 'key' is found
-        reducer.row(row) is called on each row
-        reducer.group_result() is called after the last row containing a equal value for that key.
-        It shall return a new value to emit.  
-        If keepOriginal is True, original lines will be kept in the output streamalongside grouped values.
-        If key is None all keys are group together. new_group() and end_group() are called once."""
-        if group_key is None:
-            return GroupAll(self, reducer, keepOriginal)
-        else:
-            return Group(self, group_key, reducer, keepOriginal)
             
     def log(self, stream = None, filename=None):
         "Log intermediate content into a file, for debugging purpoposes"
@@ -302,66 +273,6 @@ class PullCommand(Babe):
         if p.returncode != 0: 
             raise Exception("Mysql Process error ")
         
-            
-class Sort(Babe):
-    def __init__(self, stream, key):
-        self.stream = stream
-        self.key = key
-        self.buffer = []
-    def __iter__(self):
-        count = 0
-        for elt in self.stream:
-            if isinstance(elt, MetaInfo):
-                yield elt
-            else:
-                self.buffer.append((getattr(elt, self.key), count, elt))
-                count = count + 1
-        self.buffer.sort()
-        for (k, c, elt) in self.buffer:
-            yield elt
-
-class GroupAll(Babe):
-    def __init__(self, stream, reducer, keepOriginal):
-        self.stream = stream
-        self.reducer = reducer
-        self.keepOriginal = keepOriginal
-    def __iter__(self):
-        self.reducer.begin_group()
-        for elt in self.stream:
-            if isinstance(elt, MetaInfo):
-                yield elt
-            else:
-                if self.keepOriginal:
-                    yield elt
-                self.reducer.row(elt)
-        yield self.reducer.group_result()
-            
-class Group(Babe):
-    def __init__(self, stream, key, reducer, keepOriginal):
-        self.stream = stream
-        self.key = key
-        self.reducer = reducer
-        self.keepOriginal = keepOriginal
-    def __iter__(self):
-        pk = None
-        for elt in self.stream:
-            if isinstance(elt, MetaInfo):
-                yield elt
-            else:
-                if self.keepOriginal:
-                    yield elt 
-                k = getattr(elt, self.key)
-                if (pk is not None) and not (pk == k):
-                    yield self.reducer.group_result()
-                    self.reducer.begin_group()
-                    pk = k 
-                    self.reducer.row(elt)
-                else:
-                    self.reducer.row(elt)
-        if pk is not None:
-            yield self.reducer.group_result()    
-                        
-
                
 
                
@@ -470,12 +381,3 @@ class ExcelPull(Babe):
             return cell.internal_value
         
 
-class KeyReducer(object):
-    def begin_group(self):
-        self.value = self.initial_value
-    def row(self, row):
-        self.last_row = row
-        self.value = self.reduce(self.value, getattr(row, self.key))
-    def group_result(self):
-        return self.last_row._replace(**{self.key: self.value})
-        
