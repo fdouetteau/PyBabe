@@ -8,12 +8,26 @@ import tempfile
 from zipfile import ZipFile, ZIP_DEFLATED
 import os
 from subprocess import Popen, PIPE
-from cStringIO import StringIO
 import codecs
 from charset import UTF8Recoder, UTF8RecoderWithCleanup, PrefixReader, UnicodeCSVWriter 
+import transform
+from base import BabeBase, MetaInfo
+        
+only_to_load_1 = transform
+        
 
-class Babe(object):
     
+        
+class Babe(BabeBase):
+    
+    def get_iterator(self, stream, m, v, d):
+        b = Babe()
+        b.stream = stream
+        b.m = m
+        b.v = v 
+        b.d = d 
+        return b
+        
     def pull_command(self, command, name, names=None, inp=None, utf8_cleanup = None, encoding=None):
         return PullCommand(command, name, names, inp, utf8_cleanup, encoding) 
         
@@ -80,8 +94,6 @@ class Babe(object):
             raise Exception ()
         return CSVPull(name, names, instream, dialect)
   
-    def map(self, column,  function):
-        return Map(function, column, self)
         
     def head(self, n):
         """Keep the first n lines"""
@@ -425,14 +437,6 @@ class Augment(Babe):
                 k2 = t._make(list(k) + self.function(k))
                 yield k2 
 
-class Map(Babe):
-    def __init__(self, f, column, stream):
-        self.f = f
-        self.column = column 
-        self.stream = stream 
-    def __iter__(self):
-        return itertools.imap(lambda elt : elt._replace(**{self.column : self.f(getattr(elt, self.column))}) if not isinstance(elt, MetaInfo) else elt,
-               self.stream)
                
 
 class MultiMap(Babe):
@@ -553,12 +557,7 @@ class ExcelPull(Babe):
         else: 
             return cell.internal_value
         
-class MetaInfo(object): 
-    def __init__(self, dialect = None, name=None, names = None):
-        self.dialect = dialect
-        self.names = names
-        self.name = name
-        
+
 class KeyReducer(object):
     def begin_group(self):
         self.value = self.initial_value
@@ -567,3 +566,4 @@ class KeyReducer(object):
         self.value = self.reduce(self.value, getattr(row, self.key))
     def group_result(self):
         return self.last_row._replace(**{self.key: self.value})
+        

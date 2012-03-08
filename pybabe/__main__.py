@@ -9,6 +9,7 @@ if __name__ == "__main__":
     parser.add_option("--output", default=sys.stdout, help='Output file')
     options, remainder = parser.parse_args()
     babe = Babe()
+    print babe.map
     if not options.input:
         parser.error("--input required")
     babe.pull(options.input, 'Input').push(options.output)
