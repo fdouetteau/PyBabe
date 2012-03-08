@@ -11,7 +11,7 @@ from subprocess import Popen, PIPE
 import codecs
 from charset import UTF8Recoder, UTF8RecoderWithCleanup, PrefixReader, UnicodeCSVWriter 
 import transform
-from base import BabeBase, MetaInfo
+from base import BabeBase, MetaInfo, keynormalize
         
 only_to_load_1 = transform
         
@@ -19,6 +19,9 @@ only_to_load_1 = transform
     
         
 class Babe(BabeBase):
+    
+    def keynormalize(self, k):
+        return keynormalize(k)
     
     def get_iterator(self, stream, m, v, d):
         b = Babe()
@@ -99,15 +102,6 @@ class Babe(BabeBase):
         """Keep the first n lines"""
         return Head(self, n)
         
-    def augment(self, function, names, name=None):
-        """
-        Create a new stream that augment an existing stream by addind new colums to it
-        names. The column names
-        name. The new name for the augmented stream. 
-        function. The function to calculate the augmented column. 
-            function(row) should return a sequence of the new values to append [value1, value2]
-        """
-        return Augment(function, names, name, self)
         
     def multimap(self, d):
         return MultiMap(self, d)
@@ -137,9 +131,6 @@ class Babe(BabeBase):
         kr.initial_value = initial_value
         return self.group(kr, group_key=group_key, keepOriginal=keepOriginal)
 
-    def keynormalize(self, key):
-        """Normalize a column name to a valid python identifier"""
-        return '_'.join(re.findall(r'\w+',key))
 
 
     def group(self, reducer, group_key = None, keepOriginal=False):
@@ -421,21 +412,6 @@ class Group(Babe):
         if pk is not None:
             yield self.reducer.group_result()    
                         
-class Augment(Babe):
-    def __init__(self, function, names, name, stream):
-        self.function = function
-        self.names = names
-        self.name = name
-        self.stream = stream
-    def __iter__(self):
-        for k in self.stream: 
-            if isinstance(k, MetaInfo):
-                info = MetaInfo(names=k.names + self.names, name=self.name if self.name else k.name, dialect=k.dialect) 
-                t = namedtuple(info.name, map(self.keynormalize, info.names))
-                yield info
-            else: 
-                k2 = t._make(list(k) + self.function(k))
-                yield k2 
 
                
 
@@ -500,13 +476,13 @@ class LinePull(Babe):
         self.stream = stream
     def __iter__(self):
         if self.names:
-            t = namedtuple(self.name, map(self.keynormalize, self.names))
+            t = namedtuple(self.name, map(keynormalize, self.names))
             metainfo = MetaInfo(name=self.name, names=self.names)
             yield metainfo
         if not metainfo:
             row = self.stream.next()
             row = row.rstrip('\r\n')
-            t = namedtuple(self.name, [self.keynormalize(self.sniff_read)])
+            t = namedtuple(self.name, [keynormalize(self.sniff_read)])
             metainfo = MetaInfo(name=self.name, names=[row])
             yield metainfo
         for row in self.stream:
@@ -525,7 +501,7 @@ class CSVPull(Babe):
             names = self.names
         else: 
             names = reader.next()
-        normalize_names = map(self.keynormalize, names)
+        normalize_names = map(keynormalize, names)
         metainfo = MetaInfo(dialect=self.dialect, names=names)
         t = namedtuple(self.name, normalize_names)
         yield metainfo
@@ -547,7 +523,7 @@ class ExcelPull(Babe):
             names_row = it.next()
             names = [cell.internal_value for cell in names_row]
             yield MetaInfo(names=names)
-        t = namedtuple(self.name, map(self.keynormalize,names))
+        t = namedtuple(self.name, map(keynormalize,names))
         for row in it: # it brings a new method: iter_rows()
             yield t._make(map(self.valuenormalize, row))
         
