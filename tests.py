@@ -91,7 +91,29 @@ class TestCharset(unittest.TestCase):
         a = babe.pull('tests/test_badencoded.csv', name='Test')
         a.push(filename='tests/test_badencoded_out2.csv')
 
-        
+class TestSort(unittest.TestCase): 
+    def test_sort(self):
+        babe = Babe()
+        s = '\n'.join(['k,v'] + [ '%u,%u' % (i,-i) for i in xrange(0,100001)])
+        a = babe.pull(stream=StringIO(s), name='test', format='csv')
+        a = a.typedetect()
+        a = a.sort(key='v')
+        a = a.head(n=1)
+        buf = StringIO()
+        a = a.push(stream=buf, format='csv')
+        self.assertEquals(buf.getvalue(), 'k,v\n100000,-100000\n')        
+
+    def test_sortdiskbased(self):
+        babe = Babe()
+        s = '\n'.join(['k,v'] + [ '%u,%u' % (i,-i) for i in xrange(0,100001)])
+        a = babe.pull(stream=StringIO(s), name='test', format='csv')
+        a = a.typedetect()
+        a = a.sort_diskbased(key='v', nsize=10000)
+        a = a.head(n=1)
+        buf = StringIO()
+        a = a.push(stream=buf, format='csv')
+        self.assertEquals(buf.getvalue(), 'k,v\n100000,-100000\n')        
+
     
 class TestExcel(unittest.TestCase):
     

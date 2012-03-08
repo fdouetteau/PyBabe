@@ -1,6 +1,5 @@
 
 import csv 
-from collections import namedtuple
 import itertools
 import re
 from timeparse import parse_date, parse_datetime
@@ -278,8 +277,8 @@ class PullCommand(Babe):
                
 class TypeDetect(Babe):
     
-    patterns = [r'(?P<int>[0-9]+)', 
-         r'(?P<float>[0-9]+\.[0-9]+)',
+    patterns = [r'(?P<int>-?[0-9]+)', 
+         r'(?P<float>-?[0-9]+\.[0-9]+)',
          r'(?P<date>\d{2,4}/\d\d/\d\d|\d\d/\d\d/\d\d{2,4})', 
          r'(?P<datetime>\d\d/\d\d/\d\d{2,4} \d{2}:\d{2})'
         ]
@@ -323,17 +322,15 @@ class LinePull(Babe):
         self.stream = stream
     def __iter__(self):
         if self.names:
-            t = namedtuple(self.name, map(keynormalize, self.names))
             metainfo = MetaInfo(name=self.name, names=self.names)
             yield metainfo
         if not metainfo:
             row = self.stream.next()
             row = row.rstrip('\r\n')
-            t = namedtuple(self.name, [keynormalize(self.sniff_read)])
             metainfo = MetaInfo(name=self.name, names=[row])
             yield metainfo
         for row in self.stream:
-            yield t._make([row.rstrip('\r\n')])
+            yield metainfo.t._make([row.rstrip('\r\n')])
             
 class CSVPull(Babe):
     def __init__(self, name, names, stream, dialect):
@@ -342,18 +339,15 @@ class CSVPull(Babe):
         self.dialect = dialect
         self.names = names
     def __iter__(self):
-        t = None
         reader = csv.reader(self.stream, self.dialect)        
         if self.names:
             names = self.names
         else: 
             names = reader.next()
-        normalize_names = map(keynormalize, names)
-        metainfo = MetaInfo(dialect=self.dialect, names=names)
-        t = namedtuple(self.name, normalize_names)
+        metainfo = MetaInfo(name=self.name, dialect=self.dialect, names=names)
         yield metainfo
         for row in reader:
-            yield t._make([unicode(x, 'utf-8') for x in row])
+            yield metainfo.t._make([unicode(x, 'utf-8') for x in row])
             
 class ExcelPull(Babe):
     def __init__(self, name, names, ws):
@@ -369,10 +363,10 @@ class ExcelPull(Babe):
         else:
             names_row = it.next()
             names = [cell.internal_value for cell in names_row]
-            yield MetaInfo(names=names)
-        t = namedtuple(self.name, map(keynormalize,names))
+            metainfo =  MetaInfo(name=self.name, names=names)
+            yield metainfo
         for row in it: # it brings a new method: iter_rows()
-            yield t._make(map(self.valuenormalize, row))
+            yield metainfo.t._make(map(self.valuenormalize, row))
         
     def valuenormalize(self, cell):
         if cell.number_format == '0': 

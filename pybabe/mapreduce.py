@@ -1,22 +1,58 @@
 
 from base import MetaInfo, BabeBase
-
+from tempfile import TemporaryFile
+import cPickle
+import heapq
+import itertools
 
 def sort(stream, key):
     buf = []
-    count = 0
     for elt in stream:
         if isinstance(elt, MetaInfo):
             yield elt
         else:
-            buf.append((getattr(elt, key), count, elt))
-            count = count + 1
-    buf.sort()
-    for (k, c, elt) in buf:
+            buf.append(elt)
+    buf.sort(key=lambda obj: getattr(obj, key))
+    for elt in buf:
         yield elt
         
 BabeBase.register('sort', sort)        
 
+def sort_diskbased(stream, key, nsize=100000):
+    buf = []
+    files = []
+    count = 0 
+    t = None
+    for elt in stream: 
+        if isinstance(elt, MetaInfo):
+            t = elt.t 
+            yield elt
+        else:
+            buf.append(elt)
+            count = count + 1
+            if count % nsize == 0: 
+                buf.sort(key=lambda obj: getattr(obj, key))
+                f = TemporaryFile()
+                for item in buf:
+                    cPickle.dump((getattr(item, key), list(item)), f, cPickle.HIGHEST_PROTOCOL)
+                f.flush()
+                files.append(f)
+                del buf[:]
+    def iter_on_file(f):
+        try:
+            while True:
+                (key, v) = cPickle.load(f)
+                yield (key, t._make(v))
+        except EOFError:
+            f.close()
+    buf.sort()
+    iterables = [iter_on_file(f) for f in files] + [itertools.imap(lambda obj : (getattr(obj, key), obj), buf)]
+    for (k, row) in  heapq.merge(*iterables):
+        yield row 
+
+
+
+BabeBase.register('sort_diskbased', sort_diskbased)
     
 class KeyReducer(object):
     def begin_group(self):

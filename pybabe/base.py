@@ -1,12 +1,15 @@
 
 
 import re
+from collections import namedtuple
 
 class MetaInfo(object): 
-    def __init__(self, dialect = None, name=None, names = None):
+    def __init__(self, name, names, dialect = None):
         self.dialect = dialect
         self.names = names
         self.name = name
+        self.t = namedtuple(self.name, map(keynormalize, self.names))
+        
     
 class BabeBase(object):
     
