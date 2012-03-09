@@ -23,6 +23,18 @@ def read(format, instream, name, names, encoding, utf8_cleanup):
     for row in it: # it brings a new method: iter_rows()
         yield metainfo.t._make(map(valuenormalize, row))
 
-BabeBase.addPullPlugin('xlsx', ['xlsx'], read)
+def write(format, instream, outfile, encoding):
+    from openpyxl import Workbook
+    wb = Workbook(optimized_write = True)
+    ws = wb.create_sheet()
+    for k in instream:
+        if isinstance(k, MetaInfo):
+            metainfo = k
+            ws.append(metainfo.names)
+        else:
+            ws.append(list(k))
+    wb.save(outfile)
 
+BabeBase.addPullPlugin('xlsx', ['xlsx'], read)
+BabeBase.addPushPlugin('xlsx', ['xlsx'], write)
 

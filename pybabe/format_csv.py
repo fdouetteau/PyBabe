@@ -1,7 +1,7 @@
 
 from base import BabeBase, MetaInfo
 import csv
-from charset import UTF8Recoder, UTF8RecoderWithCleanup, PrefixReader
+from charset import UTF8Recoder, UTF8RecoderWithCleanup, PrefixReader, UnicodeCSVWriter
 import codecs
 
 def linepull(stream, name, names):
@@ -55,6 +55,17 @@ def pull(format, stream, name, names, encoding, utf8_cleanup):
         raise Exception ()
     for row in csvpull(stream, name, names, dialect):
         yield row 
-
-BabeBase.addPullPlugin('csv', ['csv', 'tsv', 'txt'], pull)  
         
+def push(format, instream, outfile, encoding):
+    if not encoding:
+        encoding = "utf8"
+    for k in instream: 
+        if isinstance(k, MetaInfo):
+            metainfo = k
+            writer = UnicodeCSVWriter(outfile, dialect=metainfo.dialect, encoding=encoding)
+            writer.writerow(metainfo.names)
+        else:
+            writer.writerow(list(k))
+    
+BabeBase.addPullPlugin('csv', ['csv', 'tsv', 'txt'], pull)  
+BabeBase.addPushPlugin('csv', ['csv', 'tsv', 'txt'], push)    
