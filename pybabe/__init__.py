@@ -6,7 +6,6 @@ from timeparse import parse_date, parse_datetime
 import tempfile
 from zipfile import ZipFile, ZIP_DEFLATED
 import os
-from subprocess import Popen, PIPE
 from charset import UnicodeCSVWriter 
 import transform, mapreduce, format_csv, format_xlsx
 from base import BabeBase, MetaInfo, keynormalize
@@ -27,10 +26,7 @@ class Babe(BabeBase):
         b.v = v 
         b.d = d 
         return b
-        
-    def pull_command(self, command, name, names=None, inp=None, utf8_cleanup = None, encoding=None):
-        return PullCommand(command, name, names, inp, utf8_cleanup, encoding) 
-        
+                
     def typedetect(self):
         "Create a stream where integer/floats are automatically detected"
         return TypeDetect(self)
@@ -150,14 +146,7 @@ class Babe(BabeBase):
         for s in to_close:
             s.close()
 
-class DebugStream(object):
-    def __init__(self, stream):
-        self.stream = stream 
-    def write(self, object):
-        print type(object), object
-        self.stream.write(object)
-        
-        
+
 
 
 class Log(Babe):
@@ -180,23 +169,6 @@ class Log(Babe):
             yield row
         if self.do_close:
             self.logstream.close()
-
-
-
-class PullCommand(Babe):
-    def __init__(self, command, name, names, inp, utf8_cleanup, encoding):
-        self.command = command
-        self.name = name
-        self.inp = inp
-        self.names = names 
-        self.utf8_cleanup = utf8_cleanup
-        self.encoding = encoding
-    def __iter__(self):
-        if p.returncode != 0: 
-            raise Exception("Mysql Process error ")
-        
-               
-
                
 class TypeDetect(Babe):
     
