@@ -12,8 +12,6 @@ only_to_load_1 = [transform, mapreduce, format_csv, format_xlsx, types]
         
 class Babe(BabeBase):
     
-    def keynormalize(self, k):
-        return keynormalize(k)
     
     def get_iterator(self, stream, m, v, d):
         b = Babe()

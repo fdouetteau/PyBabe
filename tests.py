@@ -1,6 +1,7 @@
 #!env/bin/python
 
 from pybabe import Babe
+from pybabe.base import keynormalize
 import unittest
 from stubserver import FTPStubServer
 import random
@@ -15,8 +16,7 @@ class TestBasicFunction(unittest.TestCase):
         a.push(filename='tests/test2.csv')
         
     def test_keynormalize(self):
-        babe = Babe()
-        self.assertEqual('Payant_Gratuit', babe.keynormalize('Payant/Gratuit'))
+        self.assertEqual('Payant_Gratuit', keynormalize('Payant/Gratuit'))
     
     def test_pull_process(self):
         babe = Babe()
