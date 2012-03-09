@@ -7,15 +7,13 @@ import tempfile
 from zipfile import ZipFile, ZIP_DEFLATED
 import os
 from subprocess import Popen, PIPE
-import codecs
-from charset import UTF8Recoder, UTF8RecoderWithCleanup, PrefixReader, UnicodeCSVWriter 
-import transform, mapreduce
+from charset import UnicodeCSVWriter 
+import transform, mapreduce, format_csv, format_xlsx
 from base import BabeBase, MetaInfo, keynormalize
         
-only_to_load_1 = transform
-only_to_load_2 = mapreduce
+only_to_load_1 = [transform, mapreduce, format_csv, format_xlsx]
 
-    
+
         
 class Babe(BabeBase):
     
@@ -33,80 +31,13 @@ class Babe(BabeBase):
     def pull_command(self, command, name, names=None, inp=None, utf8_cleanup = None, encoding=None):
         return PullCommand(command, name, names, inp, utf8_cleanup, encoding) 
         
-    def pull(self, filename = None, stream = None, name = None, names = None, format=None, encoding=None, utf8_cleanup=False, **kwargs):
-        fileExtension = None
-        if filename: 
-            fileBaseName, fileExtension = os.path.splitext(filename) 
-            fileExtension = fileExtension.lower()
-            if len(fileExtension) > 0:
-                fileExtension = fileExtension[1:]
-                    
-        if not format and fileExtension:
-            if fileExtension in ['xlsx', 'csv', 'tsv']:
-                format = fileExtension 
-            else: 
-                raise Exception("Unable to guess format") 
-        
-        if not format: 
-            raise Exception("Unable to guess format")
-        
-        if not format in ['xlsx', 'csv']:
-            raise Exception('Unsupported format %s' % format)
-        
-        if stream:
-            instream = stream
-        else:
-            instream = open(filename, 'rb') 
-        
-        if format == 'xlsx':
-            from openpyxl import load_workbook
-            wb = load_workbook(filename=instream, use_iterators=True)
-            ws = wb.get_active_sheet()
-            return ExcelPull(name, names, ws)
-            
-        if format == 'csv':
-            return self._pull_stream(instream, name, names, utf8_cleanup, encoding)
-        
-        
-        
-    def _pull_stream(self, instream, name, names, utf8_cleanup, encoding):
-        if not encoding:
-            encoding = 'utf8'
-            
-        if utf8_cleanup: 
-            instream = UTF8RecoderWithCleanup(instream, encoding)
-        elif codecs.getreader(encoding)  != codecs.getreader('utf-8'):
-            instream = UTF8Recoder(instream, encoding)
-        else:
-            pass
-        
-        sniff_read = instream.next()
-        instream = PrefixReader(sniff_read, instream)
-        #print type(sniff_read), sniff_read
-        try:
-            dialect = csv.Sniffer().sniff(sniff_read)
-            if dialect.delimiter.isalpha():
-                # http://bugs.python.org/issue2078
-                return LinePull(name, names, instream)
-            if sniff_read.endswith('\r\n'):
-                dialect.lineterminator = '\r\n'
-            else:
-                dialect.lineterminator = '\n'
-        except:
-            raise Exception ()
-        return CSVPull(name, names, instream, dialect)
-  
-        
-    
     def typedetect(self):
         "Create a stream where integer/floats are automatically detected"
         return TypeDetect(self)
-        
             
     def log(self, stream = None, filename=None):
         "Log intermediate content into a file, for debugging purpoposes"
         return Log(self, stream, filename)
-        
             
     def push(self, filename=None, stream = None, format=None, encoding=None, protocol=None, compress=None, **kwargs):
         metainfo = None
@@ -261,14 +192,6 @@ class PullCommand(Babe):
         self.utf8_cleanup = utf8_cleanup
         self.encoding = encoding
     def __iter__(self):
-        p = Popen(self.command, stdin=PIPE, stdout=PIPE, stderr=None)
-        if self.inp:
-            p.stdin.write(self.inp)
-        p.stdin.close()
-        i = self._pull_stream(p.stdout,self.name, self.names, self.utf8_cleanup, self.encoding)
-        for k in i:
-            yield k
-        p.wait()
         if p.returncode != 0: 
             raise Exception("Mysql Process error ")
         
@@ -315,63 +238,6 @@ class TypeDetect(Babe):
             else:
                 return elt
         
-class LinePull(Babe):
-    def __init__(self, name, names, stream):
-        self.name = name
-        self.names = names
-        self.stream = stream
-    def __iter__(self):
-        if self.names:
-            metainfo = MetaInfo(name=self.name, names=self.names)
-            yield metainfo
-        if not metainfo:
-            row = self.stream.next()
-            row = row.rstrip('\r\n')
-            metainfo = MetaInfo(name=self.name, names=[row])
-            yield metainfo
-        for row in self.stream:
-            yield metainfo.t._make([row.rstrip('\r\n')])
             
-class CSVPull(Babe):
-    def __init__(self, name, names, stream, dialect):
-        self.name = name
-        self.stream = stream
-        self.dialect = dialect
-        self.names = names
-    def __iter__(self):
-        reader = csv.reader(self.stream, self.dialect)        
-        if self.names:
-            names = self.names
-        else: 
-            names = reader.next()
-        metainfo = MetaInfo(name=self.name, dialect=self.dialect, names=names)
-        yield metainfo
-        for row in reader:
-            yield metainfo.t._make([unicode(x, 'utf-8') for x in row])
-            
-class ExcelPull(Babe):
-    def __init__(self, name, names, ws):
-        self.name = name
-        self.ws = ws
-        self.names = names
-    def __iter__(self):
-        it = self.ws.iter_rows()
-        names = None
-        if self.names: 
-            names = self.names
-            yield MetaInfo(names = self.names)
-        else:
-            names_row = it.next()
-            names = [cell.internal_value for cell in names_row]
-            metainfo =  MetaInfo(name=self.name, names=names)
-            yield metainfo
-        for row in it: # it brings a new method: iter_rows()
-            yield metainfo.t._make(map(self.valuenormalize, row))
-        
-    def valuenormalize(self, cell):
-        if cell.number_format == '0': 
-            return int(cell.internal_value)
-        else: 
-            return cell.internal_value
         
 

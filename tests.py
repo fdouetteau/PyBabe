@@ -1,3 +1,4 @@
+#!env/bin/python
 
 from pybabe import Babe
 import unittest
@@ -19,7 +20,7 @@ class TestBasicFunction(unittest.TestCase):
     
     def test_pull_process(self):
         babe = Babe()
-        a = babe.pull_command(['/bin/ls', '-1', '.'], 'ls', ['filename'], utf8_cleanup=True, encoding='utf8')
+        a = babe.pull(command=['/bin/ls', '-1', '.'], name='ls', names=['filename'], format="csv", encoding='utf8')
         a.push(filename='tests/ls.csv')
         
     def test_log(self):
