@@ -2,10 +2,10 @@
 from base import BabeBase
 
 # Load all builtin plugins
-import transform, mapreduce, format_csv, format_xlsx, types, logging
+import transform, mapreduce, format_csv, format_xlsx, types, logging, compress_zip
         
 # Just reference these reflective module once, to avoid warnings from syntax checkers
-only_to_load_1 = [transform, mapreduce, format_csv, format_xlsx, types, logging]
+only_to_load_1 = [transform, mapreduce, format_csv, format_xlsx, types, logging, compress_zip]
         
 class Babe(BabeBase):
     def get_iterator(self, stream, m, v, d):

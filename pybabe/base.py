@@ -4,7 +4,6 @@ import re, os
 from collections import namedtuple
 from subprocess import Popen, PIPE
 import tempfile
-from zipfile import ZipFile, ZIP_DEFLATED
 
 
 class MetaInfo(object): 
@@ -18,6 +17,8 @@ formats = {}
 extensions = {}
 pushFormats = {}
 pushExtensions = {}
+pushCompressFormats = {}
+pushCompressExtensions = {}
                 
 class BabeBase(object):
     
@@ -45,6 +46,12 @@ class BabeBase(object):
         pushFormats[format] = m
         for s in supportedExtensions: 
             pushExtensions[s] = format
+            
+    @classmethod
+    def addCompressPushPlugin(cls, format, supportedExtensions, m):
+        pushCompressFormats[format] = m
+        for s in supportedExtensions:
+            pushCompressExtensions[s] = format
     
 def pull(null_stream, filename = None, stream = None, command = None, command_input = None, name = None, names = None, format=None, encoding=None, utf8_cleanup=False, **kwargs):
     fileExtension = None
@@ -116,8 +123,8 @@ def push(instream, filename=None, stream = None, format=None, encoding=None, pro
     if compress: 
         compress_baseName, compress_fileExtension = os.path.splitext(compress) 
         compress_fileExtension = compress_fileExtension.lower()[1:]
-        if compress_fileExtension in ['zip']: 
-            compress_format = compress_fileExtension 
+        if compress_fileExtension in pushCompressExtensions: 
+            compress_format = pushCompressExtensions[compress_fileExtension] 
         else:
             raise Exception('Unknown exception format %s' % compress_format)
                 
@@ -147,19 +154,15 @@ def push(instream, filename=None, stream = None, format=None, encoding=None, pro
     pushFormats[format](fileExtension, instream, outstream, encoding)
     outstream.flush()
     
-    # Apply file compression
-    if compress_format == "zip": 
+    if compress_format:
+        # Apply file compression. If output protocol, use a temporary file name 
         if protocol:
             compress_file = tempfile.NamedTemporaryFile()
         else:
             compress_file = compress
-        myzip = ZipFile(compress_file, 'w', ZIP_DEFLATED)
-        myzip.write(outstream.name, filename)
-        myzip.close()
-        filename = compress
-        outstream.close()
+        pushCompressFormats[compress_format](compress_file, outstream.name, filename)
         outstream = compress_file
-        
+            
     # Apply protocol 
     if protocol == 'ftp': 
         from ftplib import FTP
