@@ -28,7 +28,7 @@ class TestBasicFunction(unittest.TestCase):
         buf2 = StringIO()
         babe = Babe()
         a = babe.pull('tests/test.csv', name='Test')
-        a = a.log(stream=buf)
+        a = a.log(logfile=buf)
         a.push(stream=buf2, format='csv')
         s = """foo	bar	f	d
 1	2	3.2	2010/10/02

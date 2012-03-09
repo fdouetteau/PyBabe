@@ -1,18 +1,17 @@
 
-import csv 
 import tempfile
 from zipfile import ZipFile, ZIP_DEFLATED
 import os
 from charset import UnicodeCSVWriter 
-import transform, mapreduce, format_csv, format_xlsx, types
-from base import BabeBase, MetaInfo, keynormalize
+from base import BabeBase, MetaInfo
+
+# Load all builtin plugins
+import transform, mapreduce, format_csv, format_xlsx, types, logging
         
 # Just reference these reflective module once, to avoid warnings from syntax checkers
-only_to_load_1 = [transform, mapreduce, format_csv, format_xlsx, types]
+only_to_load_1 = [transform, mapreduce, format_csv, format_xlsx, types, logging]
         
 class Babe(BabeBase):
-    
-    
     def get_iterator(self, stream, m, v, d):
         b = Babe()
         b.stream = stream
@@ -21,9 +20,6 @@ class Babe(BabeBase):
         b.d = d 
         return b
                             
-    def log(self, stream = None, filename=None):
-        "Log intermediate content into a file, for debugging purpoposes"
-        return Log(self, stream, filename)
             
     def push(self, filename=None, stream = None, format=None, encoding=None, protocol=None, compress=None, **kwargs):
         metainfo = None
@@ -139,26 +135,7 @@ class Babe(BabeBase):
 
 
 
-class Log(Babe):
-    def __init__(self, stream, logstream, filename):
-        self.stream = stream
-        if logstream:
-            self.logstream = logstream
-            self.do_close = False
-        else:
-            self.logstream = open(filename, 'wb')
-            self.do_close = True
-    
-    def __iter__(self):
-        for row in self.stream:
-            if isinstance(row, MetaInfo):
-                writer = csv.writer(self.logstream, row.dialect)
-                writer.writerow(row.names)
-            else:
-                writer.writerow(list(row))
-            yield row
-        if self.do_close:
-            self.logstream.close()
+
                
 
         
