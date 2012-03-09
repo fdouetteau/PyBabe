@@ -19,6 +19,7 @@ pushFormats = {}
 pushExtensions = {}
 pushCompressFormats = {}
 pushCompressExtensions = {}
+pushProtocols = {}
                 
 class BabeBase(object):
     
@@ -52,6 +53,10 @@ class BabeBase(object):
         pushCompressFormats[format] = m
         for s in supportedExtensions:
             pushCompressExtensions[s] = format
+            
+    @classmethod
+    def addProtocolPushPlugin(cls, protocol, m, early_check):
+        pushProtocols[protocol] = (early_check, m)  
     
 def pull(null_stream, filename = None, stream = None, command = None, command_input = None, name = None, names = None, format=None, encoding=None, utf8_cleanup=False, **kwargs):
     fileExtension = None
@@ -131,13 +136,11 @@ def push(instream, filename=None, stream = None, format=None, encoding=None, pro
     if protocol and not (protocol in ['ftp']):
         raise Exception('Unsupported protocol %s' % protocol)
 
-    ftp = None
-    if protocol == 'ftp' and kwargs.get('ftp_early_check', True):  # Fail fast for FTP. 
-        from ftplib import FTP
-        ftp = FTP()
-        ftp.connect(kwargs['host'], kwargs.get('port', None))
-        ftp.login(kwargs.get('user', None), kwargs.get('password', None))
-        ftp.quit()
+    if protocol and kwargs.get('protocol_early_check', True):
+        early_check = pushProtocols[protocol][0]
+        if early_check:
+            print "Early check"
+            early_check(**kwargs)
         
     
     # If external protocol or compression, write to a temporary file. 
@@ -164,13 +167,9 @@ def push(instream, filename=None, stream = None, format=None, encoding=None, pro
         outstream = compress_file
             
     # Apply protocol 
-    if protocol == 'ftp': 
-        from ftplib import FTP
-        ftp = FTP()
-        ftp.connect(kwargs['host'], kwargs.get('port', None))
-        ftp.login(kwargs.get('user', None), kwargs.get('password', None))
-        ftp.storbinary('STOR %s' % filename, open(outstream.name, 'rb'))
-        ftp.quit()
+    if protocol:
+        pushProtocols[protocol][1](outstream.name, filename, **kwargs)
+    
     for s in to_close:
         s.close()
 

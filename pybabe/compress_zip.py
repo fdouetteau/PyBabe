@@ -7,5 +7,6 @@ def compress(compress_outstream, inputfile_filename, inarchive_filename):
      myzip.write(inputfile_filename, inarchive_filename)
      myzip.close()
      
+
      
 BabeBase.addCompressPushPlugin('zip', ['zip'], compress)

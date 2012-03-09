@@ -68,12 +68,12 @@ class TestFTP(unittest.TestCase):
     def test_ftp(self):
         babe = Babe()
         a = babe.pull('tests/test.csv', name='Test')
-        a.push(filename='test.csv', protocol='ftp', host='localhost', port=self.port, ftp_early_check= False)
+        a.push(filename='test.csv', protocol='ftp', host='localhost', port=self.port, protocol_early_check= False)
 
     def test_ftpzip(self):
         babe = Babe()
         a = babe.pull('tests/test.csv', name='Test')
-        a.push(filename='test.csv', compress='test.zip', protocol='ftp', host='localhost', port=self.port, ftp_early_check=False)
+        a.push(filename='test.csv', compress='test.zip', protocol='ftp', host='localhost', port=self.port, protocol_early_check=False)
         
 class TestCharset(unittest.TestCase):
     def test_writeutf16(self):
