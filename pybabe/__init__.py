@@ -1,18 +1,14 @@
 
 import csv 
-import itertools
-import re
-from timeparse import parse_date, parse_datetime
 import tempfile
 from zipfile import ZipFile, ZIP_DEFLATED
 import os
 from charset import UnicodeCSVWriter 
-import transform, mapreduce, format_csv, format_xlsx
+import transform, mapreduce, format_csv, format_xlsx, types
 from base import BabeBase, MetaInfo, keynormalize
         
-only_to_load_1 = [transform, mapreduce, format_csv, format_xlsx]
-
-
+# Just reference these reflective module once, to avoid warnings from syntax checkers
+only_to_load_1 = [transform, mapreduce, format_csv, format_xlsx, types]
         
 class Babe(BabeBase):
     
@@ -26,11 +22,7 @@ class Babe(BabeBase):
         b.v = v 
         b.d = d 
         return b
-                
-    def typedetect(self):
-        "Create a stream where integer/floats are automatically detected"
-        return TypeDetect(self)
-            
+                            
     def log(self, stream = None, filename=None):
         "Log intermediate content into a file, for debugging purpoposes"
         return Log(self, stream, filename)
@@ -170,45 +162,7 @@ class Log(Babe):
         if self.do_close:
             self.logstream.close()
                
-class TypeDetect(Babe):
-    
-    patterns = [r'(?P<int>-?[0-9]+)', 
-         r'(?P<float>-?[0-9]+\.[0-9]+)',
-         r'(?P<date>\d{2,4}/\d\d/\d\d|\d\d/\d\d/\d\d{2,4})', 
-         r'(?P<datetime>\d\d/\d\d/\d\d{2,4} \d{2}:\d{2})'
-        ]
-         
-    
-    pattern = re.compile('(' + '|'.join(patterns) + ')$')
-    
-    def __init__(self, stream):
-        self.stream = stream
-        self.d = {}
-    def __iter__(self):
-        return itertools.imap(self.filter, self.stream)
-    def filter(self, elt):
-        if isinstance(elt, MetaInfo):
-            return elt
-        else:
-            self.d.clear()
-            for t in elt._fields:
-                v = getattr(elt, t)
-                if not isinstance(v, basestring):
-                    continue
-                g = self.pattern.match(v)
-                if g: 
-                    if g.group('int'):
-                        self.d[t] = int(v)
-                    elif g.group('float'):
-                        self.d[t] = float(v)
-                    elif g.group('date'):
-                        self.d[t] = parse_date(v)
-                    elif g.group('datetime'):
-                        self.d[t] = parse_datetime(v)
-            if len(self.d) > 0:
-                return elt._replace(**self.d)
-            else:
-                return elt
+
         
             
         
