@@ -56,6 +56,14 @@ class TestZip(unittest.TestCase):
         a = babe.pull('tests/test.csv', name='Test')
         a.push(filename='test.csv', compress='tests/test.zip')
         
+    def test_zipread(self):
+        babe = Babe()
+        a = babe.pull('tests/test_read.zip', name="Test")
+        buf = StringIO() 
+        a.push(stream=buf, format='csv')
+        s = """foo\tbar\tf\td\n1\t2\t3.2\t2010/10/02\n3\t4\t1.2\t2011/02/02\n"""
+        self.assertEquals(buf.getvalue(), s)
+        
 class TestFTP(unittest.TestCase):
     def setUp(self):
         self.port = random.choice(range(9000,11000))

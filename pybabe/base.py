@@ -13,14 +13,16 @@ class MetaInfo(object):
         self.name = name
         self.t = namedtuple(self.name, map(keynormalize, self.names))
     
-formats = {}
-extensions = {}
+pullFormats = {}
+pullExtensions = {}
 pushFormats = {}
 pushExtensions = {}
 pushCompressFormats = {}
 pushCompressExtensions = {}
 pushProtocols = {}
-                
+pullCompressFormats = {}
+pullCompressExtensions = {}
+           
 class BabeBase(object):
     
     def __iter__(self):
@@ -38,9 +40,9 @@ class BabeBase(object):
         
     @classmethod
     def addPullPlugin(cls, format, supportedExtensions, m):
-        formats[format] = m
+        pullFormats[format] = m
         for s in supportedExtensions:
-            extensions[s] = format
+            pullExtensions[s] = format
             
     @classmethod
     def addPushPlugin(cls, format, supportedExtensions, m):
@@ -55,29 +57,47 @@ class BabeBase(object):
             pushCompressExtensions[s] = format
             
     @classmethod
+    def addCompressPullPlugin(cls, format, supportedExtensions, get_list, uncompress):
+        pullCompressFormats[format] = (get_list, uncompress)
+        for s in supportedExtensions:
+            pullCompressExtensions[s] = format
+            
+    @classmethod
     def addProtocolPushPlugin(cls, protocol, m, early_check):
         pushProtocols[protocol] = (early_check, m)  
     
-def pull(null_stream, filename = None, stream = None, command = None, command_input = None, name = None, names = None, format=None, encoding=None, utf8_cleanup=False, **kwargs):
+def get_extension(filename):
+    if not filename:
+        return None
+    fileBaseName, fileExtension = os.path.splitext(filename) 
+    fileExtension = fileExtension.lower()
+    if len(fileExtension) > 0:
+        fileExtension = fileExtension[1:]
+    return fileExtension
+    
+def guess_format(compress_format, format, filename):
+    "Guess the format from the filename and provided metadata"
+    if compress_format:
+        return (compress_format, format)
+    ext = get_extension(filename)
+    if ext in pullCompressExtensions:
+        return (pullCompressExtensions[ext], format)
+    if format:
+        if not format in pullFormats:
+            raise Exception("Unsupported format %s" % format)
+        return (None, format) 
+    if ext in pullExtensions:
+        return (compress_format, pullExtensions[ext])
+    raise Exception("Unable to guess extension")
+    
+def pull(null_stream, filename = None, stream = None, command = None, compress_format = None, command_input = None, name = None, names = None, format=None, encoding=None, utf8_cleanup=False, **kwargs):
     fileExtension = None
-    if filename: 
-        fileBaseName, fileExtension = os.path.splitext(filename) 
-        fileExtension = fileExtension.lower()
-        if len(fileExtension) > 0:
-            fileExtension = fileExtension[1:]
-                
-    if not format and fileExtension:
-        if fileExtension in extensions:
-            format = extensions[fileExtension]
-        else: 
-            raise Exception("Unable to guess format") 
+    to_close = []
     
-    if not format: 
-        raise Exception("Unable to guess format")
+    # Guess format 
+    (compress_format, format)  =  guess_format(compress_format, format, filename)
     
-    if not format in formats:
-        raise Exception('Unsupported format %s' % format)
-    
+    # Open File
     if stream:
         instream = stream
     elif command:
@@ -88,16 +108,30 @@ def pull(null_stream, filename = None, stream = None, command = None, command_in
         instream = p.stdout
     elif filename:
         instream = open(filename, 'rb') 
+        to_close.append(instream)
     else:
         raise Exception("No input stream provided")  
-    i = formats[format](fileExtension, instream, name, names, encoding, utf8_cleanup, **kwargs)
+
+    if compress_format:
+        (content_list, uncompress) = pullCompressFormats[compress_format]
+        (compress_handle, namelist) = content_list(instream)
+        if len(namelist) > 1:
+            raise Exception("Too many file in archive. Only archive with one file supported")
+        filename = namelist[0]
+        (compress_format, format) = guess_format(None, format, filename)
+        instream = uncompress(compress_handle, filename)
+        to_close.append(instream)
+        
+    ## Parse high level 
+    i = pullFormats[format](fileExtension, instream, name, names, encoding, utf8_cleanup, **kwargs)
     for r in i: 
         yield r 
     
     if command:
         p.wait()
-    elif filename:
-        instream.close()
+        
+    for s in to_close:
+        s.close()
         
         
 BabeBase.register('pull', pull)
