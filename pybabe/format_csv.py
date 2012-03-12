@@ -27,7 +27,7 @@ def csvpull(stream, name, names, dialect):
             print row
         yield metainfo.t._make([unicode(x, 'utf-8') for x in row])
 
-def pull(format, stream, name, names, encoding, utf8_cleanup):    
+def pull(format, stream, name, names, encoding, utf8_cleanup, **kwargs):    
     if not encoding:
         encoding = 'utf8'
                     

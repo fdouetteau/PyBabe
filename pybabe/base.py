@@ -22,7 +22,8 @@ pushCompressExtensions = {}
 pushProtocols = {}
 pullCompressFormats = {}
 pullCompressExtensions = {}
-           
+pullProtocols = {}
+
 class BabeBase(object):
     
     def __iter__(self):
@@ -65,6 +66,10 @@ class BabeBase(object):
     @classmethod
     def addProtocolPushPlugin(cls, protocol, m, early_check):
         pushProtocols[protocol] = (early_check, m)  
+        
+    @classmethod
+    def addProtocolPullPlugin(cls, protocol, m):
+        pullProtocols[protocol] = m
     
 def get_extension(filename):
     if not filename:
@@ -97,8 +102,10 @@ def pull(null_stream, filename = None, stream = None, command = None, compress_f
     # Guess format 
     (compress_format, format)  =  guess_format(compress_format, format, filename)
     
+    if 'protocol' in kwargs:
+        instream = pullProtocols[kwargs['protocol']](filename, **kwargs)
     # Open File
-    if stream:
+    elif stream:
         instream = stream
     elif command:
         p = Popen(command, stdin=PIPE, stdout=PIPE, stderr=None)

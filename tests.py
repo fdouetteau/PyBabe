@@ -3,9 +3,11 @@
 from pybabe import Babe
 from pybabe.base import keynormalize
 import unittest
-from stubserver import FTPStubServer
 import random
 from cStringIO import StringIO
+from pyftpdlib import ftpserver
+from threading import Thread
+import shutil, tempfile
 
 class TestBasicFunction(unittest.TestCase):
     def test_pull_push(self):
@@ -50,6 +52,8 @@ class TestBasicFunction(unittest.TestCase):
 """
         self.assertEquals(s, ss)
         
+test_csv_content = """foo\tbar\tf\td\n1\t2\t3.2\t2010/10/02\n3\t4\t1.2\t2011/02/02\n"""
+        
 class TestZip(unittest.TestCase):
     def test_zip(self):
         babe = Babe()
@@ -61,27 +65,52 @@ class TestZip(unittest.TestCase):
         a = babe.pull('tests/test_read.zip', name="Test")
         buf = StringIO() 
         a.push(stream=buf, format='csv')
-        s = """foo\tbar\tf\td\n1\t2\t3.2\t2010/10/02\n3\t4\t1.2\t2011/02/02\n"""
-        self.assertEquals(buf.getvalue(), s)
+        self.assertEquals(buf.getvalue(), test_csv_content)
         
 class TestFTP(unittest.TestCase):
     def setUp(self):
         self.port = random.choice(range(9000,11000))
-        self.server = FTPStubServer(self.port)
-        self.server.run()
+        authorizer = ftpserver.DummyAuthorizer()
+        self.dir = tempfile.mkdtemp()
+        self.user = 'user'
+        self.password = 'password'
+        ftpserver.log = lambda x : None
+        ftpserver.logline = lambda x : None
+        authorizer.add_user(self.user, self.password, self.dir, perm='elradfmw')
+        address = ('127.0.0.1', self.port)
+        ftp_handler = ftpserver.FTPHandler
+        ftp_handler.authorizer = authorizer 
+        self.ftpd = ftpserver.FTPServer(address, ftp_handler)
+        class RunServer(Thread):
+            def run(self):
+                try:
+                    self.ftpd.serve_forever()
+                except Exception: 
+                    pass
+        s = RunServer()
+        s.ftpd = self.ftpd
+        s.start()
+ 
         
     def tearDown(self):
-        self.server.stop()
+        self.ftpd.close_all()
+        if self.dir.startswith('/tmp'):
+            shutil.rmtree(self.dir)
     
     def test_ftp(self):
         babe = Babe()
         a = babe.pull('tests/test.csv', name='Test')
-        a.push(filename='test.csv', protocol='ftp', host='localhost', port=self.port, protocol_early_check= False)
-
+        a.push(filename='test.csv', protocol='ftp', user=self.user, password=self.password, host='localhost', port=self.port, protocol_early_check= False)
+        b = babe.pull('test.csv', name='Test', protocol='ftp', user=self.user, password=self.password, host='localhost', port=self.port)
+        buf = StringIO()
+        b.push(stream=buf, format='csv')
+        self.assertEquals(buf.getvalue(), test_csv_content)
+        
     def test_ftpzip(self):
         babe = Babe()
         a = babe.pull('tests/test.csv', name='Test')
-        a.push(filename='test.csv', compress='test.zip', protocol='ftp', host='localhost', port=self.port, protocol_early_check=False)
+        a.push(filename='test.csv', compress='test.zip', protocol='ftp', user=self.user, password=self.password, host='localhost', port=self.port, protocol_early_check=False)
+        
         
 class TestCharset(unittest.TestCase):
     def test_writeutf16(self):
@@ -131,6 +160,26 @@ class TestExcel(unittest.TestCase):
         b = babe.pull('tests/test.xlsx', name='Test2').typedetect()
         b = b.map('Foo', lambda x : -x)
         b.push(filename='tests/test2.xlsx')
+
+
+import code, traceback, signal
+
+def debug(sig, frame):
+    """Interrupt running process, and provide a python prompt for
+    interactive debugging."""
+    d={'_frame':frame}         # Allow access to frame object.
+    d.update(frame.f_globals)  # Unless shadowed by global
+    d.update(frame.f_locals)
+
+    i = code.InteractiveConsole(d)
+    message  = "Signal recieved : entering python shell.\nTraceback:\n"
+    message += ''.join(traceback.format_stack(frame))
+    i.interact(message)
+
+def listen():
+    signal.signal(signal.SIGUSR1, debug)  # Register handler
+    
+listen()
 
 if __name__ == "__main__":
     unittest.main()
