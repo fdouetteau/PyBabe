@@ -14,7 +14,7 @@ class TestBasicFunction(unittest.TestCase):
     def test_pull_push(self):
         babe = Babe()
         a = babe.pull('tests/test.csv', name='Test').typedetect()
-        a = a.map('foo', lambda x : -x).multimap({'bar' : lambda x : x + 1, 'f' : lambda f : f / 2 }).sort('foo')
+        a = a.mapTo(lambda row: row._replace(foo=-row.foo)).sort('foo')
         a = a.groupkey('foo', int.__add__, 0, keepOriginal=True)
         a.push(filename='tests/test2.csv')
         
@@ -40,18 +40,6 @@ class TestBasicFunction(unittest.TestCase):
         self.assertEqual(s, buf.getvalue())
         self.assertEqual(s, buf2.getvalue())
         
-    def test_augment(self):
-        babe = Babe()
-        a = babe.pull('tests/test.csv', name='Test').typedetect()
-        a = a.augment(lambda o: [o.bar], name='Test2', names=['bar2'])
-        buf = StringIO()
-        a.push(stream=buf, format='csv')
-        s = buf.getvalue()
-        ss = """foo\tbar\tf\td\tbar2
-1\t2\t3.2\t2010-10-02\t2
-3\t4\t1.2\t2011-02-02\t4
-"""
-        self.assertEquals(s, ss)
         
 test_csv_content = """foo\tbar\tf\td\n1\t2\t3.2\t2010/10/02\n3\t4\t1.2\t2011/02/02\n"""
         
@@ -159,7 +147,7 @@ class TestExcel(unittest.TestCase):
     def test_excel_read_write(self):
         babe = Babe()
         b = babe.pull('tests/test.xlsx', name='Test2').typedetect()
-        b = b.map('Foo', lambda x : -x)
+        b = b.mapTo(lambda row: row._replace(Foo=-row.Foo))
         b.push(filename='tests/test2.xlsx')
 
 class TestTransform(unittest.TestCase):
@@ -233,6 +221,38 @@ class TestS3(unittest.TestCase):
         b = Babe().pull(filename='test3.csv', name='Test', bucket='florian-test', protocol="s3")
         buf = StringIO() 
         b.push(stream=buf, format='csv')
+        self.assertEquals(buf.getvalue(), s)
+        
+class TestMapTo(unittest.TestCase):
+    def test_tuple(self):
+        a = Babe().pull('tests/test.csv', name='Test').typedetect()
+        a = a.mapTo(lambda obj : obj._replace(foo=obj.foo + 1))
+        buf = StringIO()
+        a.push(stream=buf, format='csv')
+        s = """foo	bar	f	d
+2	2	3.2	2010-10-02
+4	4	1.2	2011-02-02
+"""
+        self.assertEquals(buf.getvalue(), s) 
+    
+        
+    def test_insert(self):
+        a = Babe().pull('tests/test.csv', name='Test').typedetect()
+        a = a.mapTo(lambda row : row.foo+1, insert_columns=['fooplus'])
+        buf = StringIO()
+        a.push(stream=buf, format='csv')
+        s = """foo	bar	f	d	fooplus
+1	2	3.2	2010-10-02	2
+3	4	1.2	2011-02-02	4
+"""
+        self.assertEquals(buf.getvalue(), s)
+   
+    def test_replace(self):
+        a = Babe().pull('tests/test.csv', name='Test').typedetect()
+        a = a.mapTo(lambda row : [row.foo+1, row.bar*2], replace_columns=['a','b'])
+        buf = StringIO()
+        a.push(stream=buf, format='csv')
+        s = """a\tb\n2\t4\n4\t8\n"""
         self.assertEquals(buf.getvalue(), s)
         
 import code, traceback, signal

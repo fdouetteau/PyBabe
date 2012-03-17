@@ -11,7 +11,14 @@ class MetaInfo(object):
         self.dialect = dialect
         self.names = names
         self.name = name
+        if not self.name:
+            self.name = '#'.join(self.names)
         self.t = namedtuple(self.name, map(keynormalize, self.names))
+    
+    def insert(self, name, names):
+        return MetaInfo(name=name if name else self.name, names = self.names + names, dialect=self.dialect)
+    def replace(self, name, names):
+        return MetaInfo(name=name if name else self.name, names=names, dialect=self.dialect)
     
 pullFormats = {}
 pullExtensions = {}

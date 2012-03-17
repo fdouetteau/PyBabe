@@ -3,35 +3,57 @@ from base import BabeBase, MetaInfo, keynormalize
 import itertools
 from collections import namedtuple
       
-
+def mapTo(stream, function, insert_columns = None, replace_columns = None, name = None):
+    """
+    Apply a function to a stream. The function receives as input a named tuple. 
+    
+    if insert_columns is not None, a new stream type is generated with the optional columns 
+        an array object with the inserted columns values is expected as a result from the function 
+    if replace_colunns is not None, a new stream type is generated with only the specified columns
+        an array object with the columns values is expected as a result from the function
+        
+    if neither, a named tuple is expected as a result. namedtuple._make and namedtuple._replace can be used 
+    to build the new object.  
+    """
+    if insert_columns:
+        metainfo = None
+        for row in stream:
+            if isinstance(row, MetaInfo):
+                metainfo = row.insert(name=name, names=insert_columns)
+                yield metainfo
+            else:
+                res = function(row)
+                if isinstance(res, list):
+                    yield metainfo.t._make(list(row) + res)
+                else:
+                    yield metainfo.t._make(list(row) + [res])
+    elif replace_columns:
+        metainfo = None
+        for row in stream:
+            if isinstance(row, MetaInfo):
+                metainfo = row.replace(name=name, names=replace_columns)
+                yield metainfo
+            else:
+                yield metainfo.t._make(function(row))
+    elif name:
+        metainfo = None
+        for row in stream:
+            if isinstance(row, MetaInfo):
+                metainfo = row.augment(name=name, names=[])
+                yield metainfo
+            else:
+                yield metainfo.t._make(list(row))
+    else:
+        for row in stream:
+            if isinstance(row, MetaInfo):
+                yield row
+            else: 
+                yield function(row)
+    
+BabeBase.register("mapTo", mapTo)
       
-def domap(stream, column, function):
-    return itertools.imap(lambda elt : elt._replace(**{column : function(getattr(elt, column))}) if not isinstance(elt, MetaInfo) else elt,
-           stream)
-BabeBase.register("map", domap)
-
-
-def augment(stream, function, names, name=None):
-    """
-    Create a new stream that augment an existing stream by addind new colums to it
-    names. The column names
-    name. The new name for the augmented stream. 
-    function. The function to calculate the augmented column. 
-        function(row) should return a sequence of the new values to append [value1, value2]
-    """
-    for k in stream: 
-        if isinstance(k, MetaInfo):
-            info = MetaInfo(names=k.names + names, name=name if name else k.name, dialect=k.dialect) 
-            t = namedtuple(info.name, map(keynormalize, info.names))
-            yield info
-        else: 
-            k2 = t._make(list(k) + function(k))
-            yield k2 
-
-BabeBase.register('augment', augment)
-
-
 def head(stream, n):
+    """Retrieve only the first n line of the stream"""
     for row in stream: 
         if isinstance(row, MetaInfo):
             count = 0 
