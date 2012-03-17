@@ -300,7 +300,21 @@ class TestFilter(unittest.TestCase):
     #    buf = StringIO()
     #    a.push(stream=buf, format='csv')
     #    self.assertEquals(buf.getvalue(), "a,b,sum\n1,2,\n1,4,\n,,6\n3,4,\n,,4\n")
+
+class TestMinMax(unittest.TestCase):
+    def test_max(self):
+        a = Babe().pull(stream=StringIO('a,b\n1,2\n3,4\n1,4\n'), format="csv").typedetect()
+        a = a.maxN(column='b', n=2)
+        buf = StringIO()
+        a.push(stream=buf, format='csv')
+        self.assertEquals(buf.getvalue(), 'a,b\n3,4\n1,4\n')
         
+    def test_min(self):
+        a = Babe().pull(stream=StringIO('a,b\n1,2\n3,4\n1,4\n'), format="csv").typedetect()
+        a = a.minN(column='a', n=2)
+        buf = StringIO()
+        a.push(stream=buf, format='csv')
+        self.assertEquals(buf.getvalue(), 'a,b\n1,2\n1,4\n')
         
 import code, traceback, signal
 
