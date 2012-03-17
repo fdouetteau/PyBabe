@@ -1,7 +1,5 @@
 
-from base import BabeBase, MetaInfo, keynormalize
-import itertools
-from collections import namedtuple
+from base import BabeBase, MetaInfo
       
 def mapTo(stream, function, insert_columns = None, replace_columns = None, name = None):
     """
@@ -63,18 +61,6 @@ def head(stream, n):
             count = count + 1
         yield row
 BabeBase.register('head', head)
-
-def multimap(stream, d):
-    def ddmap(elt):
-        if isinstance(elt, MetaInfo):
-            return elt
-        m = {}
-        for k in d:
-            m[k] = d[k](getattr(elt, k))
-        return elt._replace(**m) 
-    return itertools.imap(ddmap, stream)
-    
-BabeBase.register('multimap', multimap)
 
 def split(stream, column, separator):
     for row in stream:
