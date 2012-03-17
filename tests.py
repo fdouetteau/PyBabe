@@ -213,7 +213,7 @@ class TestHTTP(unittest.TestCase):
         try:
             k = urllib2.urlopen("http://localhost:%u/STOP" % self.port)
             k.read()
-        except Exception,e:
+        except Exception:
             pass
         self.thread.join()
         self.thread = None
@@ -224,6 +224,17 @@ class TestHTTP(unittest.TestCase):
         a.push(stream=buf, format='csv')
         self.assertEquals(buf.getvalue(), 'foo\tbar\tf\td\n1\t2\t3.2\t2010/10/02\n3\t4\t1.2\t2011/02/02\n')
 
+class TestS3(unittest.TestCase):
+    def test_s3(self):
+        s = "a,b\n1,2\n3,4\n"
+        buf1 = StringIO(s)
+        a = Babe().pull(stream=buf1, format='csv', name='Test')
+        a.push(filename='test3.csv', bucket='florian-test', protocol="s3") 
+        b = Babe().pull(filename='test3.csv', name='Test', bucket='florian-test', protocol="s3")
+        buf = StringIO() 
+        b.push(stream=buf, format='csv')
+        self.assertEquals(buf.getvalue(), s)
+        
 import code, traceback, signal
 
 def debug(sig, frame):

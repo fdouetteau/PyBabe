@@ -174,7 +174,7 @@ def push(instream, filename=None, stream = None, format=None, encoding=None, pro
         else:
             raise Exception('Unknown exception format %s' % compress_format)
                 
-    if protocol and not (protocol in ['ftp']):
+    if protocol and not (protocol in pushProtocols):
         raise Exception('Unsupported protocol %s' % protocol)
 
     if protocol and kwargs.get('protocol_early_check', True):
