@@ -147,3 +147,13 @@ def filterColumns(stream, name=None, remove_columns=None, keep_columns=None):
             yield metainfo.t._make([getattr(row, k) for k in names])
 
 BabeBase.register('filterColumns', filterColumns)
+
+def filter(stream, function):
+    for row in stream:
+        if isinstance(row, MetaInfo):
+            yield row
+        else:
+            if function(row):
+                yield row
+
+BabeBase.register('filter', filter)
