@@ -11,12 +11,6 @@ import shutil, tempfile
 import BaseHTTPServer, urllib2
 
 class TestBasicFunction(unittest.TestCase):
-    def test_pull_push(self):
-        babe = Babe()
-        a = babe.pull('tests/test.csv', name='Test').typedetect()
-        a = a.mapTo(lambda row: row._replace(foo=-row.foo)).sort('foo')
-        a = a.groupkey('foo', int.__add__, 0, keepOriginal=True)
-        a.push(filename='tests/test2.csv')
         
     def test_keynormalize(self):
         self.assertEqual('Payant_Gratuit', keynormalize('Payant/Gratuit'))
@@ -262,7 +256,30 @@ class TestFlatMap(unittest.TestCase):
         buf = StringIO()
         a.push(stream=buf, format="csv")
         self.assertEquals(buf.getvalue(), "a,b\n1,2\n1,3\n4,5\n4,6\n")
-    
+
+class TestGroup(unittest.TestCase):
+    def test_groupby(self):
+        a = Babe().pull(stream=StringIO('a,b\n1,2\n3,4\n1,4\n'), format="csv").typedetect()
+        a = a.groupBy(key="a", reducer=lambda t, key, rows: t._make([key, sum([row.b for row in rows])]))
+        buf = StringIO()
+        a.push(stream=buf, format='csv')
+        self.assertEquals(buf.getvalue(), "a,b\n1,6\n3,4\n")
+        
+    def test_groupAll(self):
+        a = Babe().pull(stream=StringIO('a,b\n1,2\n3,4\n1,4\n'), format="csv").typedetect()
+        a = a.groupAll(reducer=lambda t, rows: t._make([max([row.b for row in rows])]), names=['max'])
+        buf = StringIO()
+        a.push(stream=buf, format="csv")
+        self.assertEquals(buf.getvalue(), "max\n4\n")
+        
+    #def test_groupby_sum(self):
+    #    a = Babe().pull(stream=StringIO('a,b\n1,2\n3,4\n1,4\n'), format="csv").typedetect()
+    #    a = a.groupBy(key="a", reducer=lambda rows: rows + rows[0]._replace(b=sum([row.b for row in rows])))
+    #    buf = StringIO()
+    #    a.push(stream=buf, format='csv')
+    #    self.assertEquals(buf.getvalue(), "a,b,sum\n1,2,\n1,4,\n,,6\n3,4,\n,,4\n")
+        
+        
 import code, traceback, signal
 
 def debug(sig, frame):

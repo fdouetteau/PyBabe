@@ -50,69 +50,95 @@ def sort_diskbased(stream, key, nsize=100000):
     for (k, row) in  heapq.merge(*iterables):
         yield row 
 
-
-
 BabeBase.register('sort_diskbased', sort_diskbased)
     
-class KeyReducer(object):
-    def begin_group(self):
-        self.value = self.initial_value
+class Reducer(object):
+    def __init__(self, f):
+        self.f = f
+        self.buf = []
+    def begin_group(self, key):
+        del self.buf[:]     
+        self.key = key 
     def row(self, row):
-        self.last_row = row
-        self.value = self.reduce(self.value, getattr(row, self.key))
-    def group_result(self):
-        return self.last_row._replace(**{self.key: self.value})
-        
-    
-def groupkey(stream, key, red, initial_value, group_key=None, keepOriginal=False):
-    """Group all elements with equal value for group_key. 
-    value = red(value, row[key]) is called for each row with equal value for group_key
-    See 'group'  
-    """
-    kr = KeyReducer()
-    kr.key = key
-    kr.reduce = red
-    kr.initial_value = initial_value
-    return group(stream, kr, group_key=group_key, keepOriginal=keepOriginal)
-
-BabeBase.register('groupkey', groupkey)
-
-
-def group(stream, reducer, group_key = None, keepOriginal=False):
-    """Group all elements with equal value for key, assuming sorted input.
-    reducer.begin_group() is called each time a new value for key 'key' is found
-    reducer.row(row) is called on each row
-    reducer.group_result() is called after the last row containing a equal value for that key.
-    It shall return a new value to emit.  
-    If keepOriginal is True, original lines will be kept in the output streamalongside grouped values.
-    If key is None all keys are group together. new_group() and end_group() are called once."""
-    if group_key is None:
-        reducer.begin_group()
-        for elt in stream:
-            if isinstance(elt, MetaInfo):
-                yield elt
-            else:
-                if keepOriginal:
-                    yield elt
-                reducer.row(elt)
-        yield reducer.group_result()
+        self.buf.append(row)
+    def end_group(self, t):
+        if self.key:
+            return self.f(t, self.key, self.buf)
+        else:
+            return self.f(t, self.buf)
+            
+def build_reducer(reducer):
+    if hasattr(reducer, "begin_group"):
+        return reducer
     else:
-        pk = None
-        for elt in stream:
-            if isinstance(elt, MetaInfo):
-                yield elt
+        return Reducer(reducer)
+    
+    
+def groupBy(stream, key, reducer, assume_sorted=False, name = None, names=None):
+    """
+GroupBy all values for a key. 
+If reducer is a function, function(t, key, row_group) is called with an array of all rows matching the key value
+        t is the expected return type
+        key is the common key for the group. 
+Otherwise can be a 'Reducer' object. 
+    reducer.begin_group(key) will be called at the beginning of each grou
+    reducer.row(row) is called on each row
+    reducer.end_group(t) will be called at the end of each group and should return the resulting row or a list of rows of type t   
+    """
+    reducer = build_reducer(reducer)
+    if not assume_sorted:
+        stream = sort(stream, key)
+    pk = None
+    for elt in stream:
+        if isinstance(elt, MetaInfo):
+            if names or name:
+                metainfo = elt.replace(name=name, names=names)
             else:
-                if keepOriginal:
-                    yield elt 
-                k = getattr(elt, group_key)
-                if (pk is not None) and not (pk == k):
-                    yield reducer.group_result()
-                    reducer.begin_group()
-                    pk = k 
-                    reducer.row(elt)
-                else:
-                    reducer.row(elt)
-        if pk is not None:
-            yield reducer.group_result()    
+                metainfo = elt
+            yield metainfo
+        else:
+            k = getattr(elt, key)
+            if k == pk:
+                reducer.row(elt)
+            else:
+                if pk is not None:
+                    eg = reducer.end_group(metainfo.t)    
+                    if isinstance(eg, list):
+                        for e in eg:
+                            yield e
+                    else:
+                        yield eg
+                pk = k 
+                reducer.begin_group(k)
+                reducer.row(elt)
+    if pk is not None:
+        eg = reducer.end_group(metainfo.t)
+        if isinstance(eg, list):
+            for e in eg:
+                yield e 
+        else:
+            yield eg 
+            
+BabeBase.register('groupBy', groupBy)
+    
+def groupAll(stream, reducer, name = None, names = None):
+    """
+    Group all keys
+reducer can either be a function or a reducer object
+if a function, reducer(t, rows) will be called with all the rows as a parameter
+if an object, reducer.begin_group(), reducer.row() and reducer.end_group() will be called
+    """
+    reducer = build_reducer(reducer)
+    reducer.begin_group(None)
+    for elt in stream:
+        if isinstance(elt, MetaInfo):
+            if name or names:
+                metainfo = elt.replace(name, names)
+            else:
+                metainfo = elt
+            yield metainfo
+        else:
+            reducer.row(elt)
+    yield reducer.end_group(metainfo.t)
                         
-BabeBase.register('group', group)
+BabeBase.register('groupAll', groupAll)
