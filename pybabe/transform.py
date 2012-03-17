@@ -134,3 +134,16 @@ def replace(stream, oldvalue, newvalue, column = None):
                 
 BabeBase.register('replace', replace)
 
+def filterColumns(stream, name=None, remove_columns=None, keep_columns=None):
+    for row in stream:
+        if isinstance(row, MetaInfo):
+            if keep_columns:
+                names = keep_columns
+            else:
+                names = [name for name in row.names if not name in remove_columns] 
+            metainfo = row.replace(name=name, names=names)
+            yield metainfo
+        else:
+            yield metainfo.t._make([getattr(row, k) for k in names])
+
+BabeBase.register('filterColumns', filterColumns)
