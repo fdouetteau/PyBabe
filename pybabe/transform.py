@@ -157,3 +157,13 @@ def filter(stream, function):
                 yield row
 
 BabeBase.register('filter', filter)
+
+def rename(stream, **kwargs):
+    for row in stream:
+        if isinstance(row, MetaInfo):
+            metainfo = row.replace(name=None, names=[kwargs.get(name, name) for name in row.names])
+            yield metainfo
+        else:
+            yield metainfo.t._make(list(row))
+        
+BabeBase.register('rename', rename)

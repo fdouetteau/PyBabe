@@ -316,6 +316,15 @@ class TestMinMax(unittest.TestCase):
         a.push(stream=buf, format='csv')
         self.assertEquals(buf.getvalue(), 'a,b\n1,2\n1,4\n')
         
+class TestRename(unittest.TestCase):
+    def test_rename(self):
+        a = Babe().pull(stream=StringIO('a,b\n1,2\n3,4\n1,4\n'), format="csv").typedetect()
+        a = a.rename(a="c")
+        buf = StringIO()
+        a.push(stream=buf, format='csv')
+        self.assertEquals(buf.getvalue(), 'c,b\n1,2\n3,4\n1,4\n')
+
+        
 import code, traceback, signal
 
 def debug(sig, frame):
