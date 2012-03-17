@@ -255,6 +255,14 @@ class TestMapTo(unittest.TestCase):
         s = """a\tb\n2\t4\n4\t8\n"""
         self.assertEquals(buf.getvalue(), s)
         
+class TestFlatMap(unittest.TestCase):
+    def test_tuple(self):
+        a = Babe().pull(stream=StringIO("a,b\n1,2:3\n4,5:6\n"), format="csv")
+        a = a.flatMap(lambda row: [row._replace(b=i) for i in row.b.split(':')])
+        buf = StringIO()
+        a.push(stream=buf, format="csv")
+        self.assertEquals(buf.getvalue(), "a,b\n1,2\n1,3\n4,5\n4,6\n")
+    
 import code, traceback, signal
 
 def debug(sig, frame):

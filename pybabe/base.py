@@ -12,7 +12,7 @@ class MetaInfo(object):
         self.names = names
         self.name = name
         if not self.name:
-            self.name = '#'.join(self.names)
+            self.name = '__'.join(self.names)
         self.t = namedtuple(self.name, map(keynormalize, self.names))
     
     def insert(self, name, names):

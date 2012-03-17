@@ -40,7 +40,7 @@ def mapTo(stream, function, insert_columns = None, replace_columns = None, name 
                 metainfo = row.augment(name=name, names=[])
                 yield metainfo
             else:
-                yield metainfo.t._make(list(row))
+                yield metainfo.t._make(list(function(row)))
     else:
         for row in stream:
             if isinstance(row, MetaInfo):
@@ -49,6 +49,46 @@ def mapTo(stream, function, insert_columns = None, replace_columns = None, name 
                 yield function(row)
     
 BabeBase.register("mapTo", mapTo)
+
+def flatMap(stream, function, insert_columns = None, replace_columns = None, name = None):
+    if insert_columns:
+        metainfo = None
+        for row in stream:
+            if isinstance(row, MetaInfo):
+                metainfo = row.insert(name=name, names=insert_columns)
+                yield metainfo
+            else:
+                res = function(row)
+                for r in res:
+                    yield metainfo.t._make(list(row) + r)
+    elif replace_columns:
+        metainfo = None
+        for row in stream:
+            if isinstance(row, MetaInfo):
+                metainfo = row.replace(name=name, names=replace_columns)
+                yield metainfo
+            else:
+                for r in function(row):
+                    yield metainfo.t._make(list(r))
+    elif name:
+        metainfo = None
+        for row in stream:
+            if isinstance(row, MetaInfo):
+                metainfo = row.augment(name=name, names=[])
+                yield metainfo
+            else:
+                for r in function(row):
+                    yield metainfo.t._make(list(r))
+    else:
+        for row in stream:
+            if isinstance(row, MetaInfo):
+                yield row
+            else: 
+                for r in function(row):
+                    yield r
+
+BabeBase.register("flatMap", flatMap)
+
       
 def head(stream, n):
     """Retrieve only the first n line of the stream"""
