@@ -8,6 +8,7 @@ from cStringIO import StringIO
 from pyftpdlib import ftpserver
 from threading import Thread
 import shutil, tempfile
+import BaseHTTPServer, urllib2
 
 class TestBasicFunction(unittest.TestCase):
     def test_pull_push(self):
@@ -161,6 +162,67 @@ class TestExcel(unittest.TestCase):
         b = b.map('Foo', lambda x : -x)
         b.push(filename='tests/test2.xlsx')
 
+class TestTransform(unittest.TestCase):
+    def test_split(self):
+        babe = Babe()
+        buf = StringIO("""a,b
+1,3:4
+2,7
+""")
+        a = babe.pull(stream=buf,format='csv',name='Test')
+        a = a.split(column='b',separator=':')
+        buf2 = StringIO()
+        a.push(stream=buf2, format='csv')
+        self.assertEquals(buf2.getvalue(), """a,b
+1,3
+1,4
+2,7
+""")
+
+class TestHTTP(unittest.TestCase):
+    def setUp(self):
+        self.port = random.choice(range(9000,11000))
+        server_address = ('', self.port)
+        class TestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
+            def do_GET(self):
+                if self.path == "/STOP":
+                    self.send_response(200)
+                    self.end_headers()
+                    return 
+                p = self.path.replace('/remote', 'tests')
+                ff = open(p, 'rb')
+                s = ff.read()
+                self.send_response(200)
+                self.send_header('Content-type',	'text/csv')
+                self.end_headers()
+                self.wfile.write(s)
+                return 
+            def log_request(self, code, size=None):
+                pass
+        class RunServer(Thread):
+            def run(self):
+                self.httpd = BaseHTTPServer.HTTPServer(server_address=server_address,  RequestHandlerClass=TestHandler)
+                while self.keep_running:
+                    self.httpd.handle_request()
+        self.thread = RunServer()
+        self.thread.keep_running = True
+        self.thread.start()
+    
+    def tearDown(self):
+        self.thread.keep_running = False
+        try:
+            k = urllib2.urlopen("http://localhost:%u/STOP" % self.port)
+            k.read()
+        except Exception,e:
+            pass
+        self.thread.join()
+        self.thread = None
+    
+    def test_http(self):
+        a = Babe().pull(protocol='http', host='localhost', name='Test', filename='remote/test.csv', port=self.port)
+        buf = StringIO()
+        a.push(stream=buf, format='csv')
+        self.assertEquals(buf.getvalue(), 'foo\tbar\tf\td\n1\t2\t3.2\t2010/10/02\n3\t4\t1.2\t2011/02/02\n')
 
 import code, traceback, signal
 

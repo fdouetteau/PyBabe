@@ -3,6 +3,8 @@ from base import BabeBase, MetaInfo, keynormalize
 import itertools
 from collections import namedtuple
       
+
+      
 def domap(stream, column, function):
     return itertools.imap(lambda elt : elt._replace(**{column : function(getattr(elt, column))}) if not isinstance(elt, MetaInfo) else elt,
            stream)
@@ -51,6 +53,17 @@ def multimap(stream, d):
     return itertools.imap(ddmap, stream)
     
 BabeBase.register('multimap', multimap)
+
+def split(stream, column, separator):
+    for row in stream:
+        if isinstance(row, MetaInfo):
+            yield row
+        else:
+            value = getattr(row, column)
+            values = value.split(separator)
+            for v in values:
+                yield row._replace(**{column:v})
+BabeBase.register('split',split)
 
 def replace(stream, oldvalue, newvalue, column = None):
     buf = []
