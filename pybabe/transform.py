@@ -1,13 +1,13 @@
 
 from base import BabeBase, MetaInfo
       
-def mapTo(stream, function, insert_columns = None, replace_columns = None, name = None):
+def mapTo(stream, function, insert_columns = None, columns = None, name = None):
     """
     Apply a function to a stream. The function receives as input a named tuple. 
     
     if insert_columns is not None, a new stream type is generated with the optional columns 
         an array object with the inserted columns values is expected as a result from the function 
-    if replace_colunns is not None, a new stream type is generated with only the specified columns
+    if columns is not None, a new stream type is generated with only the specified columns
         an array object with the columns values is expected as a result from the function
         
     if neither, a named tuple is expected as a result. namedtuple._make and namedtuple._replace can be used 
@@ -25,11 +25,11 @@ def mapTo(stream, function, insert_columns = None, replace_columns = None, name 
                     yield metainfo.t._make(list(row) + res)
                 else:
                     yield metainfo.t._make(list(row) + [res])
-    elif replace_columns:
+    elif columns:
         metainfo = None
         for row in stream:
             if isinstance(row, MetaInfo):
-                metainfo = row.replace(name=name, names=replace_columns)
+                metainfo = row.replace(name=name, names=columns)
                 yield metainfo
             else:
                 yield metainfo.t._make(function(row))
@@ -50,7 +50,7 @@ def mapTo(stream, function, insert_columns = None, replace_columns = None, name 
     
 BabeBase.register("mapTo", mapTo)
 
-def flatMap(stream, function, insert_columns = None, replace_columns = None, name = None):
+def flatMap(stream, function, insert_columns = None, columns = None, name = None):
     if insert_columns:
         metainfo = None
         for row in stream:
@@ -61,11 +61,11 @@ def flatMap(stream, function, insert_columns = None, replace_columns = None, nam
                 res = function(row)
                 for r in res:
                     yield metainfo.t._make(list(row) + r)
-    elif replace_columns:
+    elif columns:
         metainfo = None
         for row in stream:
             if isinstance(row, MetaInfo):
-                metainfo = row.replace(name=name, names=replace_columns)
+                metainfo = row.replace(name=name, names=columns)
                 yield metainfo
             else:
                 for r in function(row):
@@ -177,7 +177,7 @@ class Window(object):
             self.buf.pop(0)
         self.buf.append(obj)
         
-def windowMap(stream, window_size, function, insert_columns = None, replace_columns = None, name = None):
+def windowMap(stream, window_size, function, insert_columns = None, columns = None, name = None):
     """
 Similar to mapTo. 
 For each row, function(rows) is called with the last 'window_size' rows
@@ -196,11 +196,11 @@ For each row, function(rows) is called with the last 'window_size' rows
                       yield metainfo.t._make(list(row) + res)
                   else:
                       yield metainfo.t._make(list(row) + [res])
-    elif replace_columns:
+    elif columns:
           metainfo = None
           for row in stream:
               if isinstance(row, MetaInfo):
-                  metainfo = row.replace(name=name, names=replace_columns)
+                  metainfo = row.replace(name=name, names=columns)
                   yield metainfo
               else:
                   window.add(row)

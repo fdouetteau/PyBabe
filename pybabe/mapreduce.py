@@ -63,9 +63,13 @@ class Reducer(object):
         self.buf.append(row)
     def end_group(self, t):
         if self.key:
-            return self.f(t, self.key, self.buf)
+            elt =  self.f(self.key, self.buf)
         else:
-            return self.f(t, self.buf)
+            elt =  self.f(self.buf)
+        if isinstance(elt, t):
+            return  elt 
+        else:
+            return  t._make(elt)
             
 def build_reducer(reducer):
     if hasattr(reducer, "begin_group"):
@@ -74,7 +78,7 @@ def build_reducer(reducer):
         return Reducer(reducer)
     
     
-def groupBy(stream, key, reducer, assume_sorted=False, name = None, names=None):
+def groupBy(stream, key, reducer, assume_sorted=False, name = None, columns=None):
     """
 GroupBy all values for a key. 
 If reducer is a function, function(t, key, row_group) is called with an array of all rows matching the key value
@@ -91,8 +95,8 @@ Otherwise can be a 'Reducer' object.
     pk = None
     for elt in stream:
         if isinstance(elt, MetaInfo):
-            if names or name:
-                metainfo = elt.replace(name=name, names=names)
+            if columns or name:
+                metainfo = elt.replace(name=name, names=columns)
             else:
                 metainfo = elt
             yield metainfo
@@ -121,7 +125,7 @@ Otherwise can be a 'Reducer' object.
             
 BabeBase.register('groupBy', groupBy)
     
-def groupAll(stream, reducer, name = None, names = None):
+def groupAll(stream, reducer, name = None, columns = None):
     """
     Group all keys
 reducer can either be a function or a reducer object
@@ -132,8 +136,8 @@ if an object, reducer.begin_group(), reducer.row() and reducer.end_group() will 
     reducer.begin_group(None)
     for elt in stream:
         if isinstance(elt, MetaInfo):
-            if name or names:
-                metainfo = elt.replace(name, names)
+            if name or columns:
+                metainfo = elt.replace(name, columns)
             else:
                 metainfo = elt
             yield metainfo

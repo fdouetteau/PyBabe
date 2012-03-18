@@ -243,7 +243,7 @@ class TestMapTo(unittest.TestCase):
    
     def test_replace(self):
         a = Babe().pull('tests/test.csv', name='Test').typedetect()
-        a = a.mapTo(lambda row : [row.foo+1, row.bar*2], replace_columns=['a','b'])
+        a = a.mapTo(lambda row : [row.foo+1, row.bar*2], columns=['a','b'])
         buf = StringIO()
         a.push(stream=buf, format='csv')
         s = """a\tb\n2\t4\n4\t8\n"""
@@ -260,14 +260,14 @@ class TestFlatMap(unittest.TestCase):
 class TestGroup(unittest.TestCase):
     def test_groupby(self):
         a = Babe().pull(stream=StringIO('a,b\n1,2\n3,4\n1,4\n'), format="csv").typedetect()
-        a = a.groupBy(key="a", reducer=lambda t, key, rows: t._make([key, sum([row.b for row in rows])]))
+        a = a.groupBy(key="a", reducer=lambda key, rows: (key, sum([row.b for row in rows])))
         buf = StringIO()
         a.push(stream=buf, format='csv')
         self.assertEquals(buf.getvalue(), "a,b\n1,6\n3,4\n")
         
     def test_groupAll(self):
         a = Babe().pull(stream=StringIO('a,b\n1,2\n3,4\n1,4\n'), format="csv").typedetect()
-        a = a.groupAll(reducer=lambda t, rows: t._make([max([row.b for row in rows])]), names=['max'])
+        a = a.groupAll(reducer=lambda rows: (max([row.b for row in rows]),), columns=['max'])
         buf = StringIO()
         a.push(stream=buf, format="csv")
         self.assertEquals(buf.getvalue(), "max\n4\n")
