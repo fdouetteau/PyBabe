@@ -324,6 +324,13 @@ class TestRename(unittest.TestCase):
         a.push(stream=buf, format='csv')
         self.assertEquals(buf.getvalue(), 'c,b\n1,2\n3,4\n1,4\n')
 
+class TestWindowMap(unittest.TestCase):
+    def test_windowMap(self):
+        a = Babe().pull(stream=StringIO('a\n1\n2\n3\n4\n5\n6\n7\n'), format="csv").typedetect()
+        a = a.windowMap(3, lambda rows : rows[-1]._make([sum([row.a for row in rows])]))
+        buf = StringIO()
+        a.push(stream=buf, format='csv')
+        self.assertEquals(buf.getvalue(), '"a"\n1\n3\n6\n9\n12\n15\n18\n')
         
 import code, traceback, signal
 

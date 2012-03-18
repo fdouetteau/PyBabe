@@ -167,3 +167,59 @@ def rename(stream, **kwargs):
             yield metainfo.t._make(list(row))
         
 BabeBase.register('rename', rename)
+
+class Window(object):
+    def __init__(self, size):
+        self.size = size
+        self.buf = []
+    def add(self, obj):
+        if len(self.buf) == self.size:
+            self.buf.pop(0)
+        self.buf.append(obj)
+        
+def windowMap(stream, window_size, function, insert_columns = None, replace_columns = None, name = None):
+    """
+Similar to mapTo. 
+For each row, function(rows) is called with the last 'window_size' rows
+    """
+    window = Window(window_size)
+    if insert_columns:
+          metainfo = None
+          for row in stream:
+              if isinstance(row, MetaInfo):
+                  metainfo = row.insert(name=name, names=insert_columns)
+                  yield metainfo
+              else:
+                  window.add(row)
+                  res = function(window.buf)
+                  if isinstance(res, list):
+                      yield metainfo.t._make(list(row) + res)
+                  else:
+                      yield metainfo.t._make(list(row) + [res])
+    elif replace_columns:
+          metainfo = None
+          for row in stream:
+              if isinstance(row, MetaInfo):
+                  metainfo = row.replace(name=name, names=replace_columns)
+                  yield metainfo
+              else:
+                  window.add(row)
+                  yield metainfo.t._make(function(window.buf))
+    elif name:
+          metainfo = None
+          for row in stream:
+              if isinstance(row, MetaInfo):
+                  metainfo = row.augment(name=name, names=[])
+                  yield metainfo
+              else:
+                  window.add(row)
+                  yield metainfo.t._make(list(function(window.buf)))
+    else:
+          for row in stream:
+              if isinstance(row, MetaInfo):
+                  yield row
+              else: 
+                  window.add(row)
+                  yield function(window.buf)
+
+BabeBase.register('windowMap', windowMap)

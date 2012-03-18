@@ -4,16 +4,17 @@ import csv
 from charset import UTF8Recoder, UTF8RecoderWithCleanup, PrefixReader, UnicodeCSVWriter
 import codecs
 
-def linepull(stream, name, names):
+def linepull(stream, name, names, dialect):
+    it = iter(stream)
     if names:
-        metainfo = MetaInfo(name=name, names=names)
+        metainfo = MetaInfo(name=name, names=names, dialect=dialect)
         yield metainfo
-    if not metainfo:
-        row = stream.next()
+    else:
+        row = it.next()
         row = row.rstrip('\r\n')
-        metainfo = MetaInfo(name=name, names=[row])
+        metainfo = MetaInfo(name=name, names=[row], dialect=dialect)
         yield metainfo
-    for row in stream:
+    for row in it:
         yield metainfo.t._make([row.rstrip('\r\n')])
             
 def csvpull(stream, name, names, dialect):
@@ -40,19 +41,16 @@ def pull(format, stream, name, names, encoding, utf8_cleanup, **kwargs):
         
     sniff_read = stream.next()
     stream = PrefixReader(sniff_read, stream)
-    try:
-        dialect = csv.Sniffer().sniff(sniff_read)
-        if sniff_read.endswith('\r\n'):
-            dialect.lineterminator = '\r\n'
-        else:
-            dialect.lineterminator = '\n'
-        if dialect.delimiter.isalpha():
-            # http://bugs.python.org/issue2078
-            for row in  linepull(stream, name, names):
-                yield row 
-            return 
-    except:
-        raise Exception ()
+    dialect = csv.Sniffer().sniff(sniff_read)
+    if sniff_read.endswith('\r\n'):
+        dialect.lineterminator = '\r\n'
+    else:
+        dialect.lineterminator = '\n'
+    if dialect.delimiter.isalpha():
+        # http://bugs.python.org/issue2078
+        for row in  linepull(stream, name, names, dialect):
+            yield row 
+        return 
     for row in csvpull(stream, name, names, dialect):
         yield row 
         
