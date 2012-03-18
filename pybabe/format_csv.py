@@ -66,4 +66,6 @@ def push(format, instream, outfile, encoding):
             writer.writerow(list(k))
     
 BabeBase.addPullPlugin('csv', ['csv', 'tsv', 'txt'], pull)  
-BabeBase.addPushPlugin('csv', ['csv', 'tsv', 'txt'], push)    
+BabeBase.addPushPlugin('csv', ['csv', 'tsv', 'txt'], push)   
+
+
