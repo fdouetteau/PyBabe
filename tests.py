@@ -332,6 +332,15 @@ class TestWindowMap(unittest.TestCase):
         a.push(stream=buf, format='csv')
         self.assertEquals(buf.getvalue(), '"a"\n1\n3\n6\n9\n12\n15\n18\n')
         
+class TestTwitter(unittest.TestCase):
+    def test_twitter(self):
+        a = Babe().pull_twitter()
+        a = a.filterColumns(keep_columns=
+        ["author_name", "author_id", "author_screen_name", "created_at", "hashtags", "text", "in_reply_to_status_id_str"])
+        a = a.typedetect()
+        buf = StringIO()
+        a.push(stream=buf, format='csv')
+        
 import code, traceback, signal
 
 def debug(sig, frame):

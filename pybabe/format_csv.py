@@ -63,7 +63,7 @@ def push(format, instream, outfile, encoding):
             writer = UnicodeCSVWriter(outfile, dialect=metainfo.dialect, encoding=encoding)
             writer.writerow(metainfo.names)
         else:
-            writer.writerow(list(k))
+            writer.writerow(k)
     
 BabeBase.addPullPlugin('csv', ['csv', 'tsv', 'txt'], pull)  
 BabeBase.addPushPlugin('csv', ['csv', 'tsv', 'txt'], push)   
