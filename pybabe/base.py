@@ -1,38 +1,47 @@
 
 
-import re, os
+import re
+import os
 from collections import namedtuple
 from subprocess import Popen, PIPE
 import tempfile
 
 
-class MetaInfo(object): 
-    def __init__(self, name, names, dialect = None):
+class MetaInfo(object):
+    def __init__(self, name, names, dialect=None):
         self.dialect = dialect
         self.names = names
         self.name = name
         if not self.name:
             self.name = '__'.join(self.names)
         self.t = namedtuple(self.name, map(keynormalize, self.names))
-    
+
     def insert(self, name, names):
-        return MetaInfo(name=name if name else self.name, names = self.names + names, dialect=self.dialect)
+        return MetaInfo(name=name if name else self.name,
+            names=self.names + names,
+            dialect=self.dialect)
+
     def replace(self, name, names):
-        return MetaInfo(name=name if name else self.name, names=names, dialect=self.dialect)
-    
-pullFormats = {}
-pullExtensions = {}
-pushFormats = {}
-pushExtensions = {}
-pushCompressFormats = {}
-pushCompressExtensions = {}
-pushProtocols = {}
-pullCompressFormats = {}
-pullCompressExtensions = {}
-pullProtocols = {}
+        return MetaInfo(name=name if name else self.name,
+        names=names,
+         dialect=self.dialect)
+
+
+
 
 class BabeBase(object):
-    
+
+    pullFormats = {}
+    pushFormats = {}
+    pullExtensions = {}
+    pushExtensions = {}
+    pushCompressFormats = {}
+    pushCompressExtensions = {}
+    pushProtocols = {}
+    pullCompressFormats = {}
+    pullCompressExtensions = {}
+    pullProtocols = {}
+
     def __iter__(self):
         return self.m(self.stream, *self.v, **self.d)
 
@@ -48,35 +57,35 @@ class BabeBase(object):
         
     @classmethod
     def addPullPlugin(cls, format, supportedExtensions, m):
-        pullFormats[format] = m
+        cls.pullFormats[format] = m
         for s in supportedExtensions:
-            pullExtensions[s] = format
-            
+            cls.pullExtensions[s] = format
+
     @classmethod
     def addPushPlugin(cls, format, supportedExtensions, m):
-        pushFormats[format] = m
-        for s in supportedExtensions: 
-            pushExtensions[s] = format
+        cls.pushFormats[format] = m
+        for s in supportedExtensions:
+            cls.pushExtensions[s] = format
             
     @classmethod
     def addCompressPushPlugin(cls, format, supportedExtensions, m):
-        pushCompressFormats[format] = m
+        cls.pushCompressFormats[format] = m
         for s in supportedExtensions:
-            pushCompressExtensions[s] = format
+            cls.pushCompressExtensions[s] = format
             
     @classmethod
     def addCompressPullPlugin(cls, format, supportedExtensions, get_list, uncompress):
-        pullCompressFormats[format] = (get_list, uncompress)
+        cls.pullCompressFormats[format] = (get_list, uncompress)
         for s in supportedExtensions:
-            pullCompressExtensions[s] = format
+            cls.pullCompressExtensions[s] = format
             
     @classmethod
     def addProtocolPushPlugin(cls, protocol, m, early_check):
-        pushProtocols[protocol] = (early_check, m)  
+        cls.pushProtocols[protocol] = (early_check, m)  
         
     @classmethod
     def addProtocolPullPlugin(cls, protocol, m):
-        pullProtocols[protocol] = m
+        cls.pullProtocols[protocol] = m
     
 def get_extension(filename):
     if not filename:
@@ -92,14 +101,14 @@ def guess_format(compress_format, format, filename):
     if compress_format:
         return (compress_format, format)
     ext = get_extension(filename)
-    if ext in pullCompressExtensions:
-        return (pullCompressExtensions[ext], format)
+    if ext in BabeBase.pullCompressExtensions:
+        return (BabeBase.pullCompressExtensions[ext], format)
     if format:
-        if not format in pullFormats:
+        if not format in BabeBase.pullFormats:
             raise Exception("Unsupported format %s" % format)
         return (None, format) 
-    if ext in pullExtensions:
-        return (compress_format, pullExtensions[ext])
+    if ext in BabeBase.pullExtensions:
+        return (compress_format, BabeBase.pullExtensions[ext])
     raise Exception("Unable to guess extension")
     
 def pull(null_stream, filename = None, stream = None, command = None, compress_format = None, command_input = None, name = None, names = None, format=None, encoding=None, utf8_cleanup=False, **kwargs):
@@ -110,7 +119,7 @@ def pull(null_stream, filename = None, stream = None, command = None, compress_f
     (compress_format, format)  =  guess_format(compress_format, format, filename)
     
     if 'protocol' in kwargs:
-        instream = pullProtocols[kwargs['protocol']](filename, **kwargs)
+        instream = BabeBase.pullProtocols[kwargs['protocol']](filename, **kwargs)
     # Open File
     elif stream:
         instream = stream
@@ -127,7 +136,7 @@ def pull(null_stream, filename = None, stream = None, command = None, compress_f
         raise Exception("No input stream provided")  
 
     if compress_format:
-        (content_list, uncompress) = pullCompressFormats[compress_format]
+        (content_list, uncompress) = BabeBase.pullCompressFormats[compress_format]
         (compress_handle, namelist) = content_list(instream)
         if len(namelist) > 1:
             raise Exception("Too many file in archive. Only archive with one file supported")
@@ -137,7 +146,7 @@ def pull(null_stream, filename = None, stream = None, command = None, compress_f
         to_close.append(instream)
         
     ## Parse high level 
-    i = pullFormats[format](fileExtension, instream, name, names, encoding, utf8_cleanup, **kwargs)
+    i = BabeBase.pullFormats[format](fileExtension, instream, name, names, encoding, utf8_cleanup, **kwargs)
     for r in i: 
         yield r 
     
@@ -162,30 +171,30 @@ def push(instream, filename=None, stream = None, format=None, encoding=None, pro
             fileExtension = fileExtension[1:]
     
     if not format and fileExtension:
-        if fileExtension in pushExtensions:
-            format = pushExtensions[fileExtension] 
+        if fileExtension in BabeBase.pushExtensions:
+            format = BabeBase.pushExtensions[fileExtension] 
         else: 
             raise Exception("Unable to guess format") 
             
     if not format: 
         raise Exception("Unable to guess format")
     
-    if not format in pushFormats: 
+    if not format in BabeBase.pushFormats: 
         raise Exception('Unsupported format %s' % format) 
                 
     if compress: 
         compress_baseName, compress_fileExtension = os.path.splitext(compress) 
         compress_fileExtension = compress_fileExtension.lower()[1:]
-        if compress_fileExtension in pushCompressExtensions: 
-            compress_format = pushCompressExtensions[compress_fileExtension] 
+        if compress_fileExtension in BabeBase.pushCompressExtensions: 
+            compress_format = BabeBase.pushCompressExtensions[compress_fileExtension] 
         else:
             raise Exception('Unknown exception format %s' % compress_format)
                 
-    if protocol and not (protocol in pushProtocols):
+    if protocol and not (protocol in BabeBase.pushProtocols):
         raise Exception('Unsupported protocol %s' % protocol)
 
     if protocol and kwargs.get('protocol_early_check', True):
-        early_check = pushProtocols[protocol][0]
+        early_check = BabeBase.pushProtocols[protocol][0]
         if early_check:
             print "Early check"
             early_check(**kwargs)
@@ -202,7 +211,7 @@ def push(instream, filename=None, stream = None, format=None, encoding=None, pro
         to_close.append(outstream)
         
     # Actually write the file. 
-    pushFormats[format](fileExtension, instream, outstream, encoding)
+    BabeBase.pushFormats[format](fileExtension, instream, outstream, encoding)
     outstream.flush()
     
     if compress_format:
@@ -211,12 +220,12 @@ def push(instream, filename=None, stream = None, format=None, encoding=None, pro
             compress_file = tempfile.NamedTemporaryFile()
         else:
             compress_file = compress
-        pushCompressFormats[compress_format](compress_file, outstream.name, filename)
+        BabeBase.pushCompressFormats[compress_format](compress_file, outstream.name, filename)
         outstream = compress_file
             
     # Apply protocol 
     if protocol:
-        pushProtocols[protocol][1](outstream.name, filename, **kwargs)
+        BabeBase.pushProtocols[protocol][1](outstream.name, filename, **kwargs)
     
     for s in to_close:
         s.close()
