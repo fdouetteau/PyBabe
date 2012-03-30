@@ -8,13 +8,25 @@ import tempfile
 
 
 class MetaInfo(object):
-    def __init__(self, name, names, dialect=None):
+    def __init__(self, name, names, primary_keys = None, dialect=None):
         self.dialect = dialect
         self.names = names
         self.name = name
+        self.primary_keys = None
         if not self.name:
             self.name = '__'.join(self.names)
-        self.t = namedtuple(self.name, map(keynormalize, self.names))
+        self.t = namedtuple(self.name, map(MetaInfo.keynormalize, self.names))
+
+    @classmethod
+    def keynormalize(cls, key):
+        """Normalize a column name to a valid python identifier"""
+        s = '_'.join(re.findall(r'\w+',key))
+        if s.startswith('_'):
+            return s[1:]
+        else:
+            return s
+
+
 
     def insert(self, name, names):
         return MetaInfo(name=name if name else self.name,
@@ -25,6 +37,16 @@ class MetaInfo(object):
         return MetaInfo(name=name if name else self.name,
         names=names,
          dialect=self.dialect)
+
+    def get_primary_identifier(self, row, linecount):
+        """Retrieve a primary identifier associated with a row
+        If primary key are defined, those are used
+        """
+        if self.primary_keys:
+            return '-'.join([getattr(row, k) for k in self.primary_keys])
+        else:
+            return self.name + '_' + str(linecount)
+
 
 
 
@@ -232,6 +254,3 @@ def push(instream, filename=None, stream = None, format=None, encoding=None, pro
 
 BabeBase.registerFinalMethod('push', push)
         
-def keynormalize(key):
-    """Normalize a column name to a valid python identifier"""
-    return '_'.join(re.findall(r'\w+',key))
