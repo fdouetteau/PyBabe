@@ -1,7 +1,7 @@
 #!env/bin/python
 
 from pybabe import Babe
-from pybabe.base import keynormalize
+from pybabe.base import MetaInfo
 import unittest
 import random
 from cStringIO import StringIO
@@ -13,7 +13,7 @@ import BaseHTTPServer, urllib2
 class TestBasicFunction(unittest.TestCase):
         
     def test_keynormalize(self):
-        self.assertEqual('Payant_Gratuit', keynormalize('Payant/Gratuit'))
+        self.assertEqual('Payant_Gratuit', MetaInfo.keynormalize('Payant/Gratuit'))
     
     def test_pull_process(self):
         babe = Babe()
@@ -340,7 +340,24 @@ class TestTwitter(unittest.TestCase):
         a = a.typedetect()
         buf = StringIO()
         a.push(stream=buf, format='csv')
-        
+    
+class TestMongo(unittest.TestCase):
+    s1 = 'rown,f,s\n1,4.3,coucou\n2,4.2,salut\n'
+    s2 = 'rown,f,s\n1,4.3,coucou2\n2,4.2,salut2\n'
+    def test_push(self):
+        a  = Babe().pull(stream=StringIO(self.s1), format='csv', primary_key='rown')
+        a = a.typedetect()
+        a.push_mongo(db='pybabe_test',collection='test_push')
+
+    def test_pushpull(self):
+        a  = Babe().pull(stream=StringIO(self.s2), format='csv', primary_key='rown')
+        a = a.typedetect()
+        a.push_mongo(db='pybabe_test',collection='test_pushpull')
+        b = Babe().pull_mongo(db="pybabe_test", names=['rown', 'f', 's'], collection='test_pushpull')
+        buf = StringIO()
+        b.push(stream=buf, format='csv')
+        self.assertEquals(buf.getvalue(), self.s2)        
+
 import code, traceback, signal
 
 def debug(sig, frame):
