@@ -54,13 +54,23 @@ def pull(format, stream, name, names, encoding, utf8_cleanup, **kwargs):
     for row in csvpull(stream, name, names, dialect):
         yield row 
         
+
+class default_dialect(csv.Dialect):
+    lineterminator = '\n'
+    delimiter = ','
+    doublequote = False
+    escapechar = '\\'
+    quoting = csv.QUOTE_MINIMAL
+    quotechar = '"'
+
 def push(format, instream, outfile, encoding):
     if not encoding:
         encoding = "utf8"
     for k in instream: 
         if isinstance(k, MetaInfo):
             metainfo = k
-            writer = UnicodeCSVWriter(outfile, dialect=metainfo.dialect, encoding=encoding)
+            dialect = metainfo.dialect if metainfo.dialect else default_dialect() 
+            writer = UnicodeCSVWriter(outfile, dialect=dialect, encoding=encoding)
             writer.writerow(metainfo.names)
         else:
             writer.writerow(k)
