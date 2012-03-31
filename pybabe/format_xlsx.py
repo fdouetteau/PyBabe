@@ -8,7 +8,7 @@ def valuenormalize(cell):
     else: 
         return cell.internal_value
 
-def read(format, instream, name, names, encoding, utf8_cleanup):
+def read(format, instream, name, names, encoding, utf8_cleanup, **kwargs):
     from openpyxl import load_workbook
     wb = load_workbook(filename=instream, use_iterators=True)
     ws = wb.get_active_sheet()
@@ -35,6 +35,6 @@ def write(format, instream, outfile, encoding):
             ws.append(list(k))
     wb.save(outfile)
 
-BabeBase.addPullPlugin('xlsx', ['xlsx'], read)
+BabeBase.addPullPlugin('xlsx', ['xlsx'], read, need_seek=True)
 BabeBase.addPushPlugin('xlsx', ['xlsx'], write)
 

@@ -431,6 +431,17 @@ class TestPrimaryKey(unittest.TestCase):
         buf = StringIO() 
         a.push(stream=buf, format='csv')
 
+class TestBuzzData(unittest.TestCase):
+    @unittest.skipUnless(Babe.has_config('buzzdata', 'api_key'), 'Requires Buzzdata api Key')
+    def test_buzzdata(self):
+        a = Babe().pull(protocol='buzzdata', 
+                dataset='best-city-contest-worldwide-cost-of-living-index',
+                 username='eiu', format='xls')
+        a = a.head(2)
+        buf = StringIO()
+        a.push(stream=buf, format='csv')
+
+
 import code, traceback, signal
 
 def debug(sig, frame):

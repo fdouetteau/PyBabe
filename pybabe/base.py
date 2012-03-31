@@ -5,7 +5,8 @@ import os
 from collections import namedtuple
 from subprocess import Popen, PIPE
 import tempfile
-
+import shutil
+import ConfigParser
 
 class MetaInfo(object):
     def __init__(self, name, names, primary_keys = None, dialect=None):
@@ -54,6 +55,7 @@ class MetaInfo(object):
 class BabeBase(object):
 
     pullFormats = {}
+    pullFormatsNeedSeek = {}
     pushFormats = {}
     pullExtensions = {}
     pushExtensions = {}
@@ -61,8 +63,29 @@ class BabeBase(object):
     pushCompressExtensions = {}
     pushProtocols = {}
     pullCompressFormats = {}
+    pullCompressFormatsNeedSeek = {}
     pullCompressExtensions = {}
     pullProtocols = {}
+    config = None
+
+    @classmethod
+    def get_config_object(cls):
+        if cls.config:
+            return cls.config
+        cls.config = ConfigParser.ConfigParser()
+        cls.config.read([os.path.join(os.path.dirname(__file__),'pybabe.cfg'), os.path.expanduser('~/.pybabe.cfg')])
+        return cls.config
+
+    @classmethod
+    def get_config(cls, section, key):
+        config = cls.get_config_object()
+        return config.get(section, key)
+            
+    @classmethod
+    def has_config(cls, section, key):
+        config = cls.get_config_object()
+        return config.has_option(section, key)
+
 
     def __iter__(self):
         return self.m(self.stream, *self.v, **self.d)
@@ -78,8 +101,9 @@ class BabeBase(object):
         setattr(cls, name, m)
         
     @classmethod
-    def addPullPlugin(cls, format, supportedExtensions, m):
+    def addPullPlugin(cls, format, supportedExtensions, m, need_seek=False):
         cls.pullFormats[format] = m
+        cls.pullFormatsNeedSeek[format] = need_seek
         for s in supportedExtensions:
             cls.pullExtensions[s] = format
 
@@ -96,7 +120,8 @@ class BabeBase(object):
             cls.pushCompressExtensions[s] = format
             
     @classmethod
-    def addCompressPullPlugin(cls, format, supportedExtensions, get_list, uncompress):
+    def addCompressPullPlugin(cls, format, supportedExtensions, get_list, uncompress, need_seek=True):
+        cls.pullCompressFormatsNeedSeek[format] = need_seek
         cls.pullCompressFormats[format] = (get_list, uncompress)
         for s in supportedExtensions:
             cls.pullCompressExtensions[s] = format
@@ -138,7 +163,9 @@ def pull(null_stream, filename = None, stream = None, command = None, compress_f
     to_close = []
     
     # Guess format 
+
     (compress_format, format)  =  guess_format(compress_format, format, filename)
+
     
     if 'protocol' in kwargs:
         instream = BabeBase.pullProtocols[kwargs['protocol']](filename, **kwargs)
@@ -156,6 +183,18 @@ def pull(null_stream, filename = None, stream = None, command = None, compress_f
         to_close.append(instream)
     else:
         raise Exception("No input stream provided")  
+
+
+    if (compress_format and BabeBase.pullCompressFormatsNeedSeek[compress_format])  or BabeBase.pullFormatsNeedSeek[format]:
+        if not hasattr(instream, 'seek'): 
+            ## Create a temporary file
+            tf = tempfile.NamedTemporaryFile()
+            print "Creating temp file %s" % tf.name
+            shutil.copyfileobj(instream, tf)
+            tf.flush()
+            tf.seek(0)
+            instream = tf
+            to_close.append(instream)
 
     if compress_format:
         (content_list, uncompress) = BabeBase.pullCompressFormats[compress_format]

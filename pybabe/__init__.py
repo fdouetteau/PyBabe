@@ -3,11 +3,12 @@ from base import BabeBase
 
 # Load all builtin plugins
 import transform, mapreduce, format_csv, format_xlsx, types, logging, compress_zip, protocol_ftp, protocol_http
-import protocol_s3, minmax, format_txt, twitter, mongo, dedup
+import protocol_s3, minmax, format_txt, twitter, mongo, dedup, protocol_buzzdata, format_xls
         
+
 # Just reference these reflective module once, to avoid warnings from syntax checkers
 only_to_load_1 = [transform, mapreduce, format_csv, format_xlsx, types, logging, compress_zip, protocol_ftp, 
-    protocol_http, protocol_s3, minmax, format_txt, twitter, mongo, dedup]
+    protocol_http, protocol_s3, minmax, format_txt, twitter, mongo, dedup, protocol_buzzdata, format_xls]
         
 class Babe(BabeBase):
     def get_iterator(self, stream, m, v, d):
@@ -17,8 +18,6 @@ class Babe(BabeBase):
         b.v = v 
         b.d = d 
         return b
-                            
-            
 
 
 
