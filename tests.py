@@ -356,7 +356,80 @@ class TestMongo(unittest.TestCase):
         b = Babe().pull_mongo(db="pybabe_test", names=['rown', 'f', 's'], collection='test_pushpull')
         buf = StringIO()
         b.push(stream=buf, format='csv')
+        self.assertEquals(buf.getvalue(), self.s2)      
+
+class TestDedup(unittest.TestCase):
+    s = 'id,value,s\n1,coucou,4\n2,blabla,5\n3,coucou,6\n4,tutu,4\n'
+    s2 = 'id,value,s\n1,coucou,4\n1,coucou,4\n3,coucou,6\n4,tutu,4\n'
+    s3 = 'id,value,s\n1,coucou,4\n3,coucou,6\n4,tutu,4\n'
+    s4 = 'id,value,s\n1,coucou,4\n2,blabla,5\n4,tutu,4\n'
+
+    def test_dedup1(self):
+        a = Babe().pull(stream=StringIO(self.s), format="csv")
+        a = a.dedup()
+        buf = StringIO()
+        a.push(stream=buf,format="csv")
+        self.assertEquals(buf.getvalue(), self.s)
+
+    def test_dedup2(self): 
+        a = Babe().pull(stream=StringIO(self.s2), format="csv")
+        a = a.dedup()
+        buf = StringIO()
+        a.push(stream=buf,format="csv")
+        self.assertEquals(buf.getvalue(), self.s3)
+
+    def test_dedup3(self):
+        a = Babe().pull(stream=StringIO(self.s2), format="csv")
+        a = a.dedup(columns=['id'])
+        buf = StringIO()
+        a.push(stream=buf,format="csv")
+        self.assertEquals(buf.getvalue(), self.s3)
+
+    def test_dedup4(self):
+        a = Babe().pull(stream=StringIO(self.s), format="csv")
+        a = a.dedup(columns=['value'])
+        buf = StringIO()
+        a.push(stream=buf,format="csv")
+        self.assertEquals(buf.getvalue(), self.s4)
+
+
+
+
+
+class TestPrimaryKey(unittest.TestCase):
+    s = 'id,value,s\n1,coucou,4\n2,blabla,5\n3,coucou,6\n4,tutu,4\n'
+
+    s2 = 'id,value,s\n1,coucou,4\n2,blabla,5\n3,coucou,6\n4,tutu,7\n'
+
+    s3 = 'id,value,s\n1,coucou,4\n2,blabla,5\n3,coucou,6\n1,tutu,4\n'
+
+    def test_primarykey(self):
+        a = Babe().pull(stream=StringIO(self.s), format='csv')
+        a = a.primary_key_detect().dedup(primary_keys=True)
+        buf = StringIO() 
+        a.push(stream=buf, format='csv')
+        self.assertEquals(buf.getvalue(), self.s)
+
+    def test_primarykey2(self):
+        a = Babe().pull(stream=StringIO(self.s2), format='csv')
+        a = a.primary_key_detect().dedup(primary_keys=True)
+        buf = StringIO() 
+        a.push(stream=buf, format='csv')
         self.assertEquals(buf.getvalue(), self.s2)        
+
+    def test_primarykey3(self):
+        a = Babe().pull(stream=StringIO(self.s3), format='csv')
+        a = a.primary_key_detect().dedup(primary_keys=True)
+        buf = StringIO() 
+        a.push(stream=buf, format='csv')
+        self.assertEquals(buf.getvalue(), self.s3)
+
+    def test_airport(self):
+        a = Babe().pull(filename='data/airports.csv')
+        a = a.primary_key_detect().dedup(primary_keys=True)
+        a = a.head(n=10)
+        buf = StringIO() 
+        a.push(stream=buf, format='csv')
 
 import code, traceback, signal
 

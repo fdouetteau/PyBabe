@@ -1,0 +1,100 @@
+ICAO,IATA,WOEID,Name,City,State,Postal Code,Country,Country Code,Latitude,Longitude,Radius,Wikipedia URL,Google Map URL
+AGAF,AFT,12520995,Afutara Airport,Monroe,Wisconsin,53566,United States,US,42.620789,-89.594337,1000,http://en.wikipedia.org/wiki/Afutara_Airport,"http://maps.google.com/?q=42.620789,-89.594337"
+AGAR,RNA,,Ulawa Airport,,,,,,,,,http://en.wikipedia.org/wiki/Ulawa_Airport,
+AGAT,ATD,12518667,Uru Harbour,Artesia,New Mexico,88210,United States,US,32.847099,-104.456078,1500,,"http://maps.google.com/?q=32.847099,-104.456078"
+AGBA,,,Barakoma Airport,,,,,,,,,,
+AGBT,BPF,12511490,Batuna Airport,Kardam,Turgovishte,7830,Bulgaria,BG,43.369202,26.2421,700,,"http://maps.google.com/?q=43.369202,26.242100"
+AGEV,,,Geva Airport,,,,,,,,,,
+AGGA,AKS,12523063,Auki Airport,,Malaita,,Solomon Islands,SB,-8.66667,160.675003,600,http://en.wikipedia.org/wiki/Auki_Airport,"http://maps.google.com/?q=-8.666670,160.675003"
+AGGB,BNY,12511005,Bellona/Anua Airport,,Central,,Solomon Islands,SB,-11.2961,159.801102,600,http://en.wikipedia.org/wiki/Bellona/Anua_Airport,"http://maps.google.com/?q=-11.296100,159.801102"
+AGGC,CHY,,Choiseul Bay Airport,,,,,,,,,http://en.wikipedia.org/wiki/Choiseul_Bay_Airport,
+AGGD,MBU,12522191,Mbambanakira Airport,Freeland,Michigan,48623,United States,US,43.5331,-84.09005,1800,http://en.wikipedia.org/wiki/Mbambanakira_Airport,"http://maps.google.com/?q=43.533100,-84.090050"
+AGGE,BAS,,Balalae Airport,,,,,,,,,http://en.wikipedia.org/wiki/Balalae_Airport,
+AGGF,FRE,,Fera Airport,,,,,,,,,http://en.wikipedia.org/wiki/Fera_Airport,
+AGGG,,,Honiara FIR,,,,,,,,,,
+AGGH,HIR,12511006,Honiara International Airport,Honiara,Guadalcanal,,Solomon Islands,SB,-9.4211,160.053299,600,http://en.wikipedia.org/wiki/Honiara_International_Airport,"http://maps.google.com/?q=-9.421100,160.053299"
+AGGI,,,Babanakira Airport,,,,,,,,,,
+AGGJ,AVU,,Avu Avu Airport,,,,,,,,,,
+AGGK,IRA,,Kirakira Airport,,,,,,,,,http://en.wikipedia.org/wiki/Kirakira_Airport,
+AGGL,SCZ,,Santa Cruz/Graciosa Bay/Luova Airport,,,,,,,,,http://en.wikipedia.org/wiki/Santa_Cruz/Graciosa_Bay/Luova_Airport,
+AGGM,MUA,12511007,Munda Airport,,Western,,Solomon Islands,SB,-8.3272,157.261093,600,http://en.wikipedia.org/wiki/Munda_Airport,"http://maps.google.com/?q=-8.327200,157.261093"
+AGGN,GZO,12511008,Nusatupe Airport,,Western,,Solomon Islands,SB,-8.0749,156.831604,600,http://en.wikipedia.org/wiki/Nusatupe_Airport,"http://maps.google.com/?q=-8.074900,156.831604"
+AGGO,MNY,22478032,Mono Airport,Manchester,England,M90 4,United Kingdom,GB,53.370232,-2.28001,4200,http://en.wikipedia.org/wiki/Mono_Airport,"http://maps.google.com/?q=53.370232,-2.280010"
+AGGP,PRS,,Marau Sound Airport,,,,,,,,,,
+AGGQ,,,Ontong Java Airport,,,,,,,,,,
+AGGR,RNL,29388368,Rennell/Tingoa Airport,Rainelle,West Virginia,25962,United States,US,37.94754,-80.717529,800,http://en.wikipedia.org/wiki/Rennell/Tingoa_Airport,"http://maps.google.com/?q=37.947540,-80.717529"
+AGGS,EGM,12511754,Seghe Airport,Moncton,New Brunswick,E1A,Canada,CA,46.116692,-64.688263,2300,http://en.wikipedia.org/wiki/Seghe_Airport,"http://maps.google.com/?q=46.116692,-64.688263"
+AGGT,NNB,12523410,Santa Ana Airport (Solomon Islands),Albany,Georgia,31701,United States,US,31.592091,-84.154831,600,http://en.wikipedia.org/wiki/Santa_Ana_Airport_(Solomon_Islands),"http://maps.google.com/?q=31.592091,-84.154831"
+AGGU,RUS,12523213,Marau Airport,Makina,Guadalcanal,,Solomon Islands,SB,-9.86376,160.822723,600,http://en.wikipedia.org/wiki/Marau_Airport,"http://maps.google.com/?q=-9.863760,160.822723"
+AGGV,VAO,12497127,Suavanao Airport,,Malampa,,Vanuatu,VU,-15.896435,167.300751,1000,http://en.wikipedia.org/wiki/Suavanao_Airport,"http://maps.google.com/?q=-15.896435,167.300751"
+AGGY,XYA,,Yandina Airport,,,,,,,,,http://en.wikipedia.org/wiki/Yandina_Airport,
+AGIN,,,Isuna Heliport,,,,,,,,,,
+AGKG,KGE,12514202,Kaghau Airport,Jeju-Si,Jaeju-Do,690,South Korea,KR,33.5056,126.495003,1600,http://en.wikipedia.org/wiki/Kaghau_Airport,"http://maps.google.com/?q=33.505600,126.495003"
+AGKU,KUE,,Kukudu Airport,,,,,,,,,,
+AGOK,GTA,,Gatokae Aerodrome,,,,,,,,,http://en.wikipedia.org/wiki/Gatokae_Aerodrome,
+AGRC,RIN,12523211,Ringi Cove Airport,,Western,,Solomon Islands,SB,-8.2,157.033325,600,,"http://maps.google.com/?q=-8.200000,157.033325"
+AGRM,RBV,12518820,Ramata Airport,Big Bear City,California,92314,United States,US,34.261101,-116.853119,1200,http://en.wikipedia.org/wiki/Ramata_Airport,"http://maps.google.com/?q=34.261101,-116.853119"
+ANYN,INU,12523130,Nauru International Airport,Yaren,Yaren,,Nauru,NR,-0.54855,166.920853,600,http://en.wikipedia.org/wiki/Nauru_International_Airport,"http://maps.google.com/?q=-0.548550,166.920853"
+AYBK,BUA,,Buka Airport,,,,,,,,,http://en.wikipedia.org/wiki/Buka_Airport,
+AYCH,CMU,12519023,Chimbu Airport,Camarillo,California,93010,United States,US,34.208679,-119.078102,2200,http://en.wikipedia.org/wiki/Chimbu_Airport,"http://maps.google.com/?q=34.208679,-119.078102"
+AYDU,DAU,12515464,Daru Airport,Daru,Western,331,Papua New Guinea,PG,-9.0878,143.195007,600,http://en.wikipedia.org/wiki/Daru_Airport,"http://maps.google.com/?q=-9.087800,143.195007"
+AYGA,GKA,12515466,Goroka Airport,Goroka,Eastern Highlands,441,Papua New Guinea,PG,-6.0828,145.396103,600,http://en.wikipedia.org/wiki/Goroka_Airport,"http://maps.google.com/?q=-6.082800,145.396103"
+AYGN,GUR,12515467,Gurney Airport,Alotau,Milne Bay,211,Papua New Guinea,PG,-10.3108,150.338593,600,http://en.wikipedia.org/wiki/Gurney_Airport,"http://maps.google.com/?q=-10.310800,150.338593"
+AYGR,PNP,12515465,Girua Airport,Popondetta,Northern,241,Papua New Guinea,PG,-8.8056,148.308899,600,http://en.wikipedia.org/wiki/Girua_Airport,"http://maps.google.com/?q=-8.805600,148.308899"
+AYHK,HKN,12515468,Hoskins Airport,Kimbe,West New Britain,622,Papua New Guinea,PG,-5.4628,150.403595,600,http://en.wikipedia.org/wiki/Hoskins_Airport,"http://maps.google.com/?q=-5.462800,150.403595"
+AYKA,,,Kiriwini Airport,,,,,,,,,,
+AYKI,UNG,28835863,Kiunga Airport,Guarulhos,Sao Paulo,7013,Brazil,BR,-23.49412,-46.548759,100,http://en.wikipedia.org/wiki/Kiunga_Airport,"http://maps.google.com/?q=-23.494120,-46.548759"
+AYKK,KRI,,Kikori Airport,,,,,,,,,http://en.wikipedia.org/wiki/Kikori_Airport,
+AYKM,KMA,56058693,Kerema Airport,Breda,North Brabant,4811,Netherlands,NL,51.590618,4.77639,400,http://en.wikipedia.org/wiki/Kerema_Airport,"http://maps.google.com/?q=51.590618,4.776390"
+AYKT,KIE,12515471,Kieta Aropa Airport,Arawa,North Solomons,352,Papua New Guinea,PG,-6.3087,155.723206,600,,"http://maps.google.com/?q=-6.308700,155.723206"
+AYKV,KVG,12515469,Kavieng Airport,Kavieng,New Ireland,631,Papua New Guinea,PG,-2.5806,150.8069,600,http://en.wikipedia.org/wiki/Kavieng_Airport,"http://maps.google.com/?q=-2.580600,150.806900"
+AYKY,,,Kunaye Airport,,,,,,,,,http://en.wikipedia.org/wiki/Kunaye_Airport,
+AYLA,,,Lae Airfield,,,,,,,,,http://en.wikipedia.org/wiki/Lae_Airfield,
+AYMD,MAG,12515472,Madang Airport,Madang,Madang,511,Papua New Guinea,PG,-5.21,145.786896,600,http://en.wikipedia.org/wiki/Madang_Airport,"http://maps.google.com/?q=-5.210000,145.786896"
+AYMH,HGU,12515475,Mount Hagen Airport,Mount Hagen,Western Highlands,281,Papua New Guinea,PG,-5.8272,144.294998,600,http://en.wikipedia.org/wiki/Mount_Hagen_Airport,"http://maps.google.com/?q=-5.827200,144.294998"
+AYMN,MDU,,Mendi Airport,,,,,,,,,http://en.wikipedia.org/wiki/Mendi_Airport,
+AYMO,MAS,12515473,Momote Airport,Lorengau,Manus,641,Papua New Guinea,PG,-2.1052,146.925797,600,http://en.wikipedia.org/wiki/Momote_Airport,"http://maps.google.com/?q=-2.105200,146.925797"
+AYMR,MXH,12521030,Moro Airport,Morris,Minnesota,56267,United States,US,45.571461,-95.969147,900,http://en.wikipedia.org/wiki/Moro_Airport,"http://maps.google.com/?q=45.571461,-95.969147"
+AYMS,MIS,,Misima Airport,,,,,,,,,http://en.wikipedia.org/wiki/Misima_Airport,
+AYNZ,LAE,12515476,Lae Nadzab Airport,Lae,Morobe,411,Papua New Guinea,PG,-6.5672,146.724701,600,http://en.wikipedia.org/wiki/Lae_Nadzab_Airport,"http://maps.google.com/?q=-6.567200,146.724701"
+AYPY,POM,12515477,Port Moresby/Jackson International Airport,Port Moresby,National Capital,154,Papua New Guinea,PG,-9.4425,147.219406,600,http://en.wikipedia.org/wiki/Port_Moresby/Jackson_International_Airport,"http://maps.google.com/?q=-9.442500,147.219406"
+AYRB,OLD,12519484,Rabaul Airport,Old Town,Maine,4468,United States,US,44.94952,-68.66967,1400,http://en.wikipedia.org/wiki/Rabaul_Airport,"http://maps.google.com/?q=44.949520,-68.669670"
+AYTA,TIZ,12523242,Tari Airport,Mendi,Southern Highlands,255,Papua New Guinea,PG,-5.83333,142.949997,600,http://en.wikipedia.org/wiki/Tari_Airport,"http://maps.google.com/?q=-5.833330,142.949997"
+AYTB,TBG,12485778,Tabubil Airport,,US Virgin Islands,,United States,US,18.451574,-64.826534,800,http://en.wikipedia.org/wiki/Tabubil_Airport,"http://maps.google.com/?q=18.451574,-64.826534"
+AYTK,RAB,12515478,Rabaul Airport,Rabaul,East New Britain,611,Papua New Guinea,PG,-4.2272,152.183899,600,http://en.wikipedia.org/wiki/Rabaul_Airport,"http://maps.google.com/?q=-4.227200,152.183899"
+AYVN,VAI,,Vanimo Airport,,,,,,,,,http://en.wikipedia.org/wiki/Vanimo_Airport,
+AYWD,WBM,12518861,Wapenamanda Airport,Bloomington,Illinois,61704,United States,US,40.484051,-88.913467,2300,http://en.wikipedia.org/wiki/Wapenamanda_Airport,"http://maps.google.com/?q=40.484051,-88.913467"
+AYWK,WWK,12515480,Wewak International Airport,Wewak,East Sepik,531,Papua New Guinea,PG,-3.5858,143.667206,600,http://en.wikipedia.org/wiki/Wewak_International_Airport,"http://maps.google.com/?q=-3.585800,143.667206"
+BGAA,JEG,12523840,Aasiaat Airport,Ausiait,Vestgronland,3950,Greenland,GL,68.707451,-52.806919,1400,http://en.wikipedia.org/wiki/Aasiaat_Airport,"http://maps.google.com/?q=68.707451,-52.806919"
+BGAG,AAP,12518619,Aappilattoq Heliport (Qaasuitsup),Houston,Texas,77082,United States,US,29.7167,-95.583298,600,http://en.wikipedia.org/wiki/Aappilattoq_Heliport_(Qaasuitsup),"http://maps.google.com/?q=29.716700,-95.583298"
+BGAK,,,Akunnaaq Heliport,,,,,,,,,http://en.wikipedia.org/wiki/Akunnaaq_Heliport,
+BGAM,AGM,12523853,Tasiilaq Heliport,Angmassalik,Ostgronland,3913,Greenland,GL,65.666702,-37.666698,1300,http://en.wikipedia.org/wiki/Tasiilaq_Heliport,"http://maps.google.com/?q=65.666702,-37.666698"
+BGAP,LLU,12520551,Alluitsup Paa Heliport,Lamar,Missouri,64759,United States,US,37.489399,-94.311401,700,http://en.wikipedia.org/wiki/Alluitsup_Paa_Heliport,"http://maps.google.com/?q=37.489399,-94.311401"
+BGAQ,,,Aappilattoq Heliport (Kujalleq),,,,,,,,,http://en.wikipedia.org/wiki/Aappilattoq_Heliport_(Kujalleq),
+BGAR,JRK,12523837,Arsuk Heliport,Narssaq,Vestgronland,3932,Greenland,GL,61.180401,-48.453152,1100,,"http://maps.google.com/?q=61.180401,-48.453152"
+BGAS,,,Ammassivik Heliport,,,,,,,,,http://en.wikipedia.org/wiki/Ammassivik_Heliport,
+BGAT,,,Attu Heliport,,,,,,,,,http://en.wikipedia.org/wiki/Attu_Heliport,
+BGBW,UAK,12513031,Narsarsuaq Airport,Narsarssurk,Vestgronland,3923,Greenland,GL,61.161098,-45.427799,1100,http://en.wikipedia.org/wiki/Narsarsuaq_Airport,"http://maps.google.com/?q=61.161098,-45.427799"
+BGCH,JCH,12523838,Qasigiannguit Heliport,Kasigianguit,Vestgronland,3951,Greenland,GL,68.833298,-51.0,1500,http://en.wikipedia.org/wiki/Qasigiannguit_Heliport,"http://maps.google.com/?q=68.833298,-51.000000"
+BGCO,CNP,12518832,Nerlerit Inaat Airport,Chappell,Nebraska,69129,United States,US,41.08289,-102.47213,1000,http://en.wikipedia.org/wiki/Nerlerit_Inaat_Airport,"http://maps.google.com/?q=41.082890,-102.472130"
+BGET,,,Eqalugaarsuit Heliport,,,,,,,,,,
+BGFD,,,Narsaq Kujalleq Heliport,,,,,,,,,http://en.wikipedia.org/wiki/Narsaq_Kujalleq_Heliport,
+BGGD,JGR,12523842,Kangilinnguit Heliport,Narssaq,Vestgronland,3930,Greenland,GL,61.233299,-48.099998,1100,,"http://maps.google.com/?q=61.233299,-48.099998"
+BGGH,GOH,12513030,Nuuk Airport,Nuuk,Vestgronland,3900,Greenland,GL,64.1922,-51.682499,1200,http://en.wikipedia.org/wiki/Nuuk_Airport,"http://maps.google.com/?q=64.192200,-51.682499"
+BGGN,JGO,12523841,Qeqertarsuaq Heliport,Ilulisat,Vestgronland,3953,Greenland,GL,69.25,-53.549999,1500,http://en.wikipedia.org/wiki/Qeqertarsuaq_Heliport,"http://maps.google.com/?q=69.250000,-53.549999"
+BGIA,IKE,,Ikerasak Heliport,,,,,,,,,http://en.wikipedia.org/wiki/Ikerasak_Heliport,
+BGIG,,,Iginniarfik Heliport,,,,,,,,,http://en.wikipedia.org/wiki/Iginniarfik_Heliport,
+BGIK,,,Ikerasaarsuk Heliport,,,,,,,,,http://en.wikipedia.org/wiki/Ikerasaarsuk_Heliport,
+BGIL,,,Ilimanaq Heliport,,,,,,,,,http://en.wikipedia.org/wiki/Ilimanaq_Heliport,
+BGIN,,,Innaarsuit Heliport,,,,,,,,,http://en.wikipedia.org/wiki/Innaarsuit_Heliport,
+BGIS,,,Isortoq Heliport,,,,,,,,,http://en.wikipedia.org/wiki/Isortoq_Heliport,
+BGIT,,,Ikamiut Heliport,,,,,,,,,http://en.wikipedia.org/wiki/Ikamiut_Heliport,
+BGJH,JJU,12523845,Qaqortoq Heliport,Qaqortoq,Vestgronland,3920,Greenland,GL,60.748322,-46.0317,1100,http://en.wikipedia.org/wiki/Qaqortoq_Heliport,"http://maps.google.com/?q=60.748322,-46.031700"
+BGJN,JAV,12523844,Ilulissat Airport,Ilulisat,Vestgronland,3952,Greenland,GL,69.25,-51.0,1500,http://en.wikipedia.org/wiki/Ilulissat_Airport,"http://maps.google.com/?q=69.250000,-51.000000"
+BGKA,QPW,12523207,Kangaatsiaq Heliport,Batemans Bay,New South Wales,2536,Australia,AU,-35.716671,150.183334,700,http://en.wikipedia.org/wiki/Kangaatsiaq_Heliport,"http://maps.google.com/?q=-35.716671,150.183334"
+BGKK,KUS,12523846,Kulusuk Airport,Scoresby Sound,Ostgronland,3915,Greenland,GL,65.566704,-37.116699,1300,http://en.wikipedia.org/wiki/Kulusuk_Airport,"http://maps.google.com/?q=65.566704,-37.116699"
+BGKL,UPK,12523967,Upernavik Kujalleq Heliport,Puerto de la Cruz,Canary Islands,38418,Spain,ES,28.40048,-16.5462,600,http://en.wikipedia.org/wiki/Upernavik_Kujalleq_Heliport,"http://maps.google.com/?q=28.400480,-16.546200"
+BGKM,,,Kuummiit Heliport,,,,,,,,,http://en.wikipedia.org/wiki/Kuummiit_Heliport,
+BGKQ,KLQ,12473675,Kullorsuaq Heliport,,Vestgronland,,Greenland,GL,73.814785,-56.96199,2700,http://en.wikipedia.org/wiki/Kullorsuaq_Heliport,"http://maps.google.com/?q=73.814785,-56.961990"
+BGKS,KAQ,12518551,Kangersuatsiaq Heliport,Akutan,Alaska,99553,United States,US,54.127102,-165.889099,900,http://en.wikipedia.org/wiki/Kangersuatsiaq_Heliport,"http://maps.google.com/?q=54.127102,-165.889099"
+BGKT,,,Kitsissuarsuit Heliport,,,,,,,,,http://en.wikipedia.org/wiki/Kitsissuarsuit_Heliport,

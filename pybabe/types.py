@@ -2,6 +2,7 @@
 import re, itertools
 from base import MetaInfo, BabeBase
 from timeparse import parse_date, parse_datetime
+from collections import deque
 
 patterns = [r'(?P<int>-?[0-9]+)', 
      r'(?P<float>-?[0-9]+\.[0-9]+)',
@@ -38,3 +39,43 @@ def typefilter(elt):
         else:
             return elt
 BabeBase.register("typedetect", typedetect)
+
+
+def primary_key_detect(stream, max=None): 
+    d = deque()
+    it = iter(stream)
+    for linecount, row in enumerate(it):
+        d.append(row)
+        if isinstance(row,MetaInfo): 
+            metainfo = row
+            values = [set() for k in metainfo.names]
+            keys = set(xrange(0,len(metainfo.names)))
+        else:
+            for idx, val in enumerate(row):
+                if values[idx] is not None:
+                    if val in values[idx]:
+                        values[idx] = None
+                        # print "Duplicate column %u on line %u" % (idx, linecount)
+                        keys.remove(idx)
+                    else:
+                        values[idx].add(val)
+            if len(keys) <= 1:
+                break
+    if len(keys) == 1:
+        metainfo.primary_keys = [metainfo.names[list(keys)[0]]]
+        #print "Detected primary key %s" % str(metainfo.primary_keys)
+    elif len(keys) == 0:
+        pass # print 'no primary key'
+    else:
+        metainfo.primary_keys = [metainfo.names[min(keys)]]
+        #  print "Assumed primary key %s" % str(metainfo.primary_keys)
+    for row in d:
+        yield row
+    for row in it:
+        yield row
+
+BabeBase.register('primary_key_detect', primary_key_detect)
+
+
+             
+

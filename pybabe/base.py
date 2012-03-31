@@ -14,7 +14,7 @@ class MetaInfo(object):
         self.name = name
         self.primary_keys = None
         if not self.name:
-            self.name = '__'.join(self.names)
+            self.name = '__'.join(map(MetaInfo.keynormalize, self.names))
         self.t = namedtuple(self.name, map(MetaInfo.keynormalize, self.names))
 
     @classmethod
