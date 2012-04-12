@@ -223,3 +223,38 @@ For each row, function(rows) is called with the last 'window_size' rows
                   yield function(window.buf)
 
 BabeBase.register('windowMap', windowMap)
+
+def transpose(stream):
+    """
+    Transpose a stream. 
+    For each row, the 'unique identifier' for this row will be used as a column name. 
+    id, b, c
+    PARIS, foo, bas
+    LONDON, coucou, salut
+
+    column, PARIS,LONDON
+    b, foo, coucou
+    c, bas, salut
+    """
+    for row in stream:
+        if isinstance(row, MetaInfo):
+            metainfo = row
+            linecount = 0 
+            t_names = ["_".join(metainfo.primary_keys) if metainfo.primary_keys else 'linecount']
+            t_primary_keys = t_names[0]
+            t_rows = [[name] for name in metainfo.names]
+        else:
+            linecount = linecount + 1
+            c_id = metainfo.get_primary_identifier(row, linecount)
+            t_names.append(c_id)    
+            for i, cell in enumerate(row): 
+                t_rows[i].append(cell)
+    t_metainfo= MetaInfo(name = metainfo.name, names=t_names, primary_keys=t_primary_keys)
+    yield t_metainfo
+    for t_row in t_rows: 
+        if t_row[0] in metainfo.primary_keys:
+            continue
+        yield t_metainfo.t(*t_row)
+
+BabeBase.register('transpose', transpose)
+
