@@ -16,7 +16,7 @@ def pull(format, stream, name, names, encoding, utf8_cleanup, **kwargs):
     for line in stream:
         yield metainfo.t._make([line])
 
-def push(format, instream, outfile, encoding):
+def push(format, instream, outfile, encoding, **kwargs):
     if not encoding:
         encoding = "utf8"
     outstream = codecs.getwriter(encoding)(outfile)

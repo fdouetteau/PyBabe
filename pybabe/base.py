@@ -13,7 +13,9 @@ class MetaInfo(object):
         self.dialect = dialect
         self.names = names
         self.name = name
-        self.primary_keys = None
+        self.primary_keys = primary_keys
+        if isinstance(primary_keys, basestring): 
+            self.primary_keys = [primary_keys]
         if not self.name:
             self.name = '__'.join(map(MetaInfo.keynormalize, self.names))
         self.t = namedtuple(self.name, map(MetaInfo.keynormalize, self.names))
@@ -23,10 +25,10 @@ class MetaInfo(object):
         """Normalize a column name to a valid python identifier"""
         s = '_'.join(re.findall(r'\w+',key))
         if s.startswith('_'):
-            return s[1:]
-        else:
-            return s
-
+            s = s[1:]
+        if s[0].isdigit(): 
+            s = 'd_' + s
+        return s
 
 
     def insert(self, name, names):
@@ -44,7 +46,7 @@ class MetaInfo(object):
         If primary key are defined, those are used
         """
         if self.primary_keys:
-            return '-'.join([getattr(row, k) for k in self.primary_keys])
+            return '-'.join([str(getattr(row, k)) for k in self.primary_keys])
         else:
             return self.name + '_' + str(linecount)
 
@@ -169,6 +171,7 @@ def pull(null_stream, filename = None, stream = None, command = None, compress_f
     
     if 'protocol' in kwargs:
         instream = BabeBase.pullProtocols[kwargs['protocol']](filename, **kwargs)
+        to_close.append(instream)
     # Open File
     elif stream:
         instream = stream
@@ -272,7 +275,7 @@ def push(instream, filename=None, stream = None, format=None, encoding=None, pro
         to_close.append(outstream)
         
     # Actually write the file. 
-    BabeBase.pushFormats[format](fileExtension, instream, outstream, encoding)
+    BabeBase.pushFormats[format](fileExtension, instream, outstream, encoding, **kwargs)
     outstream.flush()
     
     if compress_format:

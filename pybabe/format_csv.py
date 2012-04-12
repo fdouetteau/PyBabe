@@ -4,7 +4,7 @@ import csv
 from charset import UTF8Recoder, UTF8RecoderWithCleanup, PrefixReader, UnicodeCSVWriter
 import codecs
 
-def linepull(stream, name, names, dialect):
+def linepull(stream, name, names, dialect, **kwargs):
     it = iter(stream)
     if names:
         metainfo = MetaInfo(name=name, names=names, dialect=dialect)
@@ -17,11 +17,11 @@ def linepull(stream, name, names, dialect):
     for row in it:
         yield metainfo.t._make([row.rstrip('\r\n')])
             
-def csvpull(stream, name, names, dialect):
+def csvpull(stream, name, names, dialect, **kwargs):
     reader = csv.reader(stream, dialect)        
     if not names:
         names = reader.next()
-    metainfo = MetaInfo(name=name, dialect=dialect, names=names)
+    metainfo = MetaInfo(name=name, dialect=dialect, names=names, primary_keys=kwargs.get('primary_key', kwargs.get('primary_keys', None)))
     yield metainfo
     for row in reader:
         if name == 'ls': 
@@ -48,10 +48,10 @@ def pull(format, stream, name, names, encoding, utf8_cleanup, **kwargs):
         dialect.lineterminator = '\n'
     if dialect.delimiter.isalpha():
         # http://bugs.python.org/issue2078
-        for row in  linepull(stream, name, names, dialect):
+        for row in  linepull(stream, name, names, dialect, **kwargs):
             yield row 
         return 
-    for row in csvpull(stream, name, names, dialect):
+    for row in csvpull(stream, name, names, dialect, **kwargs):
         yield row 
         
 
@@ -63,13 +63,15 @@ class default_dialect(csv.Dialect):
     quoting = csv.QUOTE_MINIMAL
     quotechar = '"'
 
-def push(format, instream, outfile, encoding):
+def push(format, instream, outfile, encoding, delimiter=None, **kwargs):
     if not encoding:
         encoding = "utf8"
     for k in instream: 
         if isinstance(k, MetaInfo):
             metainfo = k
             dialect = metainfo.dialect if metainfo.dialect else default_dialect() 
+            if delimiter:
+                dialect.delimiter = delimiter
             writer = UnicodeCSVWriter(outfile, dialect=dialect, encoding=encoding)
             writer.writerow(metainfo.names)
         else:

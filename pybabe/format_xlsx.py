@@ -23,7 +23,7 @@ def read(format, instream, name, names, encoding, utf8_cleanup, **kwargs):
     for row in it: # it brings a new method: iter_rows()
         yield metainfo.t._make(map(valuenormalize, row))
 
-def write(format, instream, outfile, encoding):
+def write(format, instream, outfile, encoding, **kwargs):
     from openpyxl import Workbook
     wb = Workbook(optimized_write = True)
     ws = wb.create_sheet()

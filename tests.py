@@ -161,6 +161,15 @@ class TestTransform(unittest.TestCase):
 2,7
 """)
 
+    s = 'city,b,c\nPARIS,foo,bar\nLONDON,coucou,salut\n'
+    s2 = 'city,PARIS,LONDON\nb,foo,coucou\nc,bar,salut\n' 
+    def test_transpose(self):
+        a = Babe().pull(stream=StringIO(self.s), format='csv', primary_key='city').transpose()
+        buf = StringIO()
+        a.push(stream=buf, format='csv')
+        self.assertEquals(buf.getvalue(), self.s2)
+
+
 class TestHTTP(unittest.TestCase):
     def setUp(self):
         self.port = random.choice(range(9000,11000))
@@ -441,6 +450,18 @@ class TestBuzzData(unittest.TestCase):
         buf = StringIO()
         a.push(stream=buf, format='csv')
 
+
+class TestSQL(unittest.TestCase):
+    s = 'id,value,s\n1,coucou,4\n2,blabla,5\n3,coucou,6\n4,tutu,4\n'
+
+    def test_pushsqlite(self):
+        a = Babe().pull(stream=StringIO(self.s), format='csv')
+        a = a.typedetect()
+        a.push_sql(table='test_table', database_kind='sqlite', database='test.sqlite', drop_table = True, create_table=True)
+        b = Babe().pull_sql(database_kind='sqlite', database='test.sqlite', table='test_table')
+        buf = StringIO()
+        b.push(stream=buf, format='csv', delimiter=',')
+        self.assertEquals(buf.getvalue(), self.s)
 
 import code, traceback, signal
 
