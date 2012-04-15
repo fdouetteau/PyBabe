@@ -5,9 +5,9 @@ from base import MetaInfo, BabeBase
 def valuenormalize(cell):
     return cell.value 
 
-def read(format, instream, name, names, encoding, utf8_cleanup, **kwargs):
+def read(format, stream, name, names, kwargs):
     import xlrd
-    wb = xlrd.open_workbook(file_contents=instream.read(), encoding_override=encoding)
+    wb = xlrd.open_workbook(file_contents=stream.read(), encoding_override=kwargs.get('encoding', None))
     ws = wb.sheet_by_index(0)
     nrows = ws.nrows
     if names: 

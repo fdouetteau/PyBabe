@@ -4,7 +4,7 @@ import csv
 from charset import UTF8Recoder, UTF8RecoderWithCleanup, PrefixReader, UnicodeCSVWriter
 import codecs
 
-def linepull(stream, name, names, dialect, **kwargs):
+def linepull(stream, name, names, dialect, kwargs):
     it = iter(stream)
     if names:
         metainfo = MetaInfo(name=name, names=names, dialect=dialect)
@@ -17,7 +17,7 @@ def linepull(stream, name, names, dialect, **kwargs):
     for row in it:
         yield metainfo.t._make([row.rstrip('\r\n')])
             
-def csvpull(stream, name, names, dialect, **kwargs):
+def csvpull(stream, name, names, dialect, kwargs):
     reader = csv.reader(stream, dialect)        
     if not names:
         names = reader.next()
@@ -28,14 +28,11 @@ def csvpull(stream, name, names, dialect, **kwargs):
             print row
         yield metainfo.t._make([unicode(x, 'utf-8') for x in row])
 
-def pull(format, stream, name, names, encoding, utf8_cleanup, **kwargs):    
-    if not encoding:
-        encoding = 'utf8'
-                    
-    if utf8_cleanup: 
-        stream = UTF8RecoderWithCleanup(stream, encoding)
-    elif codecs.getreader(encoding)  != codecs.getreader('utf-8'):
-        stream = UTF8Recoder(stream, encoding)
+def pull(format, stream, name, names, kwargs):                        
+    if kwargs.get('utf8_cleanup', False): 
+        stream = UTF8RecoderWithCleanup(stream, kwargs.get('encoding', 'utf-8'))
+    elif codecs.getreader(kwargs.get('encoding', 'utf-8'))  != codecs.getreader('utf-8'):
+        stream = UTF8Recoder(stream, kwargs.get('encoding', None))
     else:
         pass
         
@@ -48,10 +45,10 @@ def pull(format, stream, name, names, encoding, utf8_cleanup, **kwargs):
         dialect.lineterminator = '\n'
     if dialect.delimiter.isalpha():
         # http://bugs.python.org/issue2078
-        for row in  linepull(stream, name, names, dialect, **kwargs):
+        for row in  linepull(stream, name, names, dialect, kwargs):
             yield row 
         return 
-    for row in csvpull(stream, name, names, dialect, **kwargs):
+    for row in csvpull(stream, name, names, dialect, kwargs):
         yield row 
         
 

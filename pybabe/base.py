@@ -160,11 +160,22 @@ def guess_format(compress_format, format, filename):
         return (compress_format, BabeBase.pullExtensions[ext])
     raise Exception("Unable to guess extension")
     
-def pull(null_stream, filename = None, stream = None, command = None, compress_format = None, command_input = None, name = None, names = None, format=None, encoding=None, utf8_cleanup=False, **kwargs):
+def pull(null_stream, **kwargs):
     fileExtension = None
     to_close = []
     
     # Guess format 
+
+    filename = kwargs.get('filename', None)
+    stream = kwargs.get('stream', None)
+    command = kwargs.get('command', None)
+    compress_format = kwargs.get('compress_format', None)
+    command_input = kwargs.get('command_input', None)
+    name = kwargs.get('name', None)
+    names = kwargs.get('names', None)
+    format = kwargs.get('format', None)
+    encoding = kwargs.get('encoding', None)
+    utf8_cleanup = kwargs.get('utf8_cleanup', False)
 
     (compress_format, format)  =  guess_format(compress_format, format, filename)
 
@@ -209,8 +220,9 @@ def pull(null_stream, filename = None, stream = None, command = None, compress_f
         instream = uncompress(compress_handle, filename)
         to_close.append(instream)
         
+
     ## Parse high level 
-    i = BabeBase.pullFormats[format](fileExtension, instream, name, names, encoding, utf8_cleanup, **kwargs)
+    i = BabeBase.pullFormats[format](format=fileExtension, stream=instream, name=name, names=names, kwargs=kwargs)
     for r in i: 
         yield r 
     

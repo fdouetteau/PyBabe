@@ -3,6 +3,7 @@
 from base import BabeBase, MetaInfo
 import csv
 from subprocess import Popen, PIPE
+import time
 
 PULL_DB = { 
     'mysql' : 
@@ -37,6 +38,13 @@ PUSH_DB = {
         'drop_table' : 'DROP TABLE IF EXISTS %s;\n',  
         'create_table' : 'CREATE TABLE IF NOT EXISTS %s ( %s );\n', 
         'import_query': '.separator "\t"\n.import %s %s\n', # Import into database. 
+    }, 
+    'mysql' : 
+    { 
+        'command' : ['mysql'], 
+        'drop_table' : 'DROP TABLE IF EXISTS %s;\n', 
+        'create_table' : 'CREATE TABLE IF NOT EXISTS %s ( %s );\n', 
+        'import_query' : "LOAD DATA INFILE '%s' INTO TABLE %s FIELDS TERMINATED BY '\t'"
     }
 }
 
@@ -112,7 +120,7 @@ def push_sql(stream, database_kind, table=None, host=None, create_table = False,
     
     c = c + [database]
     
-    p = Popen(c, stdin=PIPE, stdout=PIPE, stderr=None)
+    p = Popen(c, stdin=PIPE, stdout=None, stderr=None)
 
     for row in stream:
         if isinstance(row, MetaInfo):
@@ -125,14 +133,27 @@ def push_sql(stream, database_kind, table=None, host=None, create_table = False,
                 drop_table_query = db_params['drop_table'] % table
                 #print drop_table_query
                 p.stdin.write(drop_table_query)
+                if p.returncode:
+                    break
             if create_table:
                 fields = ','.join([name + ' varchar(255)' for name in metainfo.names])
                 create_table_query = db_params['create_table'] % (table, fields)
                 #print create_table_query
                 p.stdin.write(create_table_query)
+                if p.returncode:
+                    break
             #print import_query
             p.stdin.write(import_query)
-            writestream = open(filename, "w")
+            p.stdin.flush()
+            writestream = None
+            for retry in xrange(0,5):
+                try:
+                    fd = os.open(filename, os.O_WRONLY | os.O_NONBLOCK)
+                    writestream = os.fdopen(fd, 'w')
+                except OSError, e:
+                    if retry == 4:
+                        raise e
+                    time.sleep(0.5)
             writer = csv.writer(writestream, dialect=sql_dialect()) 
         else:
             writer.writerow(row)

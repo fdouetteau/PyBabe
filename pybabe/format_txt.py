@@ -2,10 +2,8 @@
 import codecs
 from base import MetaInfo, BabeBase
 
-def pull(format, stream, name, names, encoding, utf8_cleanup, **kwargs):    
-    if not encoding:
-          encoding = 'utf8'
-    stream = codecs.getreader(encoding)(stream)
+def pull(format, stream, name, names, kwargs):    
+    stream = codecs.getreader(kwargs.get('encoding', 'utf8'))(stream)
 
     if not names:
         names=['text']
@@ -17,9 +15,7 @@ def pull(format, stream, name, names, encoding, utf8_cleanup, **kwargs):
         yield metainfo.t._make([line])
 
 def push(format, instream, outfile, encoding, **kwargs):
-    if not encoding:
-        encoding = "utf8"
-    outstream = codecs.getwriter(encoding)(outfile)
+    outstream = codecs.getwriter(kwargs.get('encoding', 'utf8'))(outfile)
     for row in instream:
         if isinstance(row, MetaInfo):
             pass

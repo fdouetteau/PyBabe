@@ -10,6 +10,14 @@ from threading import Thread
 import shutil, tempfile
 import BaseHTTPServer, urllib2
 
+
+def can_connect_to_the_net(): 
+    try:
+        socket.gethostbyname('www.google.com')
+        return True
+    except: 
+        return False
+
 class TestBasicFunction(unittest.TestCase):
         
     def test_keynormalize(self):
@@ -24,7 +32,7 @@ class TestBasicFunction(unittest.TestCase):
         buf = StringIO()
         buf2 = StringIO()
         babe = Babe()
-        a = babe.pull('tests/test.csv', name='Test')
+        a = babe.pull(filename='tests/test.csv', name='Test')
         a = a.log(logfile=buf)
         a.push(stream=buf2, format='csv')
         s = """foo	bar	f	d
@@ -40,12 +48,12 @@ test_csv_content = """foo\tbar\tf\td\n1\t2\t3.2\t2010/10/02\n3\t4\t1.2\t2011/02/
 class TestZip(unittest.TestCase):
     def test_zip(self):
         babe = Babe()
-        a = babe.pull('tests/test.csv', name='Test')
+        a = babe.pull(filename='tests/test.csv', name='Test')
         a.push(filename='test.csv', compress='tests/test.zip')
         
     def test_zipread(self):
         babe = Babe()
-        a = babe.pull('tests/test_read.zip', name="Test")
+        a = babe.pull(filename='tests/test_read.zip', name="Test")
         buf = StringIO() 
         a.push(stream=buf, format='csv')
         self.assertEquals(buf.getvalue(), test_csv_content)
@@ -82,34 +90,34 @@ class TestFTP(unittest.TestCase):
     
     def test_ftp(self):
         babe = Babe()
-        a = babe.pull('tests/test.csv', name='Test')
+        a = babe.pull(filename='tests/test.csv', name='Test')
         a.push(filename='test.csv', protocol='ftp', user=self.user, password=self.password, host='localhost', port=self.port, protocol_early_check= False)
-        b = babe.pull('test.csv', name='Test', protocol='ftp', user=self.user, password=self.password, host='localhost', port=self.port)
+        b = babe.pull(filename='test.csv', name='Test', protocol='ftp', user=self.user, password=self.password, host='localhost', port=self.port)
         buf = StringIO()
         b.push(stream=buf, format='csv')
         self.assertEquals(buf.getvalue(), test_csv_content)
         
     def test_ftpzip(self):
         babe = Babe()
-        a = babe.pull('tests/test.csv', name='Test')
+        a = babe.pull(filename='tests/test.csv', name='Test')
         a.push(filename='test.csv', compress='test.zip', protocol='ftp', user=self.user, password=self.password, host='localhost', port=self.port, protocol_early_check=False)
         
         
 class TestCharset(unittest.TestCase):
     def test_writeutf16(self):
         babe = Babe()
-        a = babe.pull('tests/test.csv', name='Test')
+        a = babe.pull(filename='tests/test.csv', name='Test')
         a.push(filename='tests/test_utf16.csv', encoding='utf_16')
         
     def test_cleanup(self):
         babe = Babe()
-        a = babe.pull('tests/test_badencoded.csv', utf8_cleanup=True, name='Test')
+        a = babe.pull(filename='tests/test_badencoded.csv', utf8_cleanup=True, name='Test')
         a.push(filename='tests/test_badencoded_out.csv')
 
     def test_cleanup2(self):
         # Test no cleanup
         babe = Babe()
-        a = babe.pull('tests/test_badencoded.csv', name='Test')
+        a = babe.pull(filename='tests/test_badencoded.csv', name='Test')
         a.push(filename='tests/test_badencoded_out2.csv')
 
 class TestSort(unittest.TestCase): 
@@ -140,7 +148,7 @@ class TestExcel(unittest.TestCase):
     
     def test_excel_read_write(self):
         babe = Babe()
-        b = babe.pull('tests/test.xlsx', name='Test2').typedetect()
+        b = babe.pull(filename='tests/test.xlsx', name='Test2').typedetect()
         b = b.mapTo(lambda row: row._replace(Foo=-row.Foo))
         b.push(filename='tests/test2.xlsx')
 
@@ -216,6 +224,7 @@ class TestHTTP(unittest.TestCase):
         self.assertEquals(buf.getvalue(), 'foo\tbar\tf\td\n1\t2\t3.2\t2010/10/02\n3\t4\t1.2\t2011/02/02\n')
 
 class TestS3(unittest.TestCase):
+    @unittest.skipUnless(can_connect_to_the_net(), 'Requires net connection')
     def test_s3(self):
         s = "a,b\n1,2\n3,4\n"
         buf1 = StringIO(s)
@@ -228,7 +237,7 @@ class TestS3(unittest.TestCase):
         
 class TestMapTo(unittest.TestCase):
     def test_tuple(self):
-        a = Babe().pull('tests/test.csv', name='Test').typedetect()
+        a = Babe().pull(filename='tests/test.csv', name='Test').typedetect()
         a = a.mapTo(lambda obj : obj._replace(foo=obj.foo + 1))
         buf = StringIO()
         a.push(stream=buf, format='csv')
@@ -240,7 +249,7 @@ class TestMapTo(unittest.TestCase):
     
         
     def test_insert(self):
-        a = Babe().pull('tests/test.csv', name='Test').typedetect()
+        a = Babe().pull(filename='tests/test.csv', name='Test').typedetect()
         a = a.mapTo(lambda row : row.foo+1, insert_columns=['fooplus'])
         buf = StringIO()
         a.push(stream=buf, format='csv')
@@ -251,7 +260,7 @@ class TestMapTo(unittest.TestCase):
         self.assertEquals(buf.getvalue(), s)
    
     def test_replace(self):
-        a = Babe().pull('tests/test.csv', name='Test').typedetect()
+        a = Babe().pull(filename='tests/test.csv', name='Test').typedetect()
         a = a.mapTo(lambda row : [row.foo+1, row.bar*2], columns=['a','b'])
         buf = StringIO()
         a.push(stream=buf, format='csv')
@@ -342,6 +351,7 @@ class TestWindowMap(unittest.TestCase):
         self.assertEquals(buf.getvalue(), '"a"\n1\n3\n6\n9\n12\n15\n18\n')
         
 class TestTwitter(unittest.TestCase):
+    @unittest.skipUnless(can_connect_to_the_net(), 'Requires net connection')
     def test_twitter(self):
         a = Babe().pull_twitter()
         a = a.filterColumns(keep_columns=
@@ -441,6 +451,7 @@ class TestPrimaryKey(unittest.TestCase):
         a.push(stream=buf, format='csv')
 
 class TestBuzzData(unittest.TestCase):
+    @unittest.skipUnless(can_connect_to_the_net(), 'Requires net connection')
     @unittest.skipUnless(Babe.has_config('buzzdata', 'api_key'), 'Requires Buzzdata api Key')
     def test_buzzdata(self):
         a = Babe().pull(protocol='buzzdata', 
@@ -459,6 +470,15 @@ class TestSQL(unittest.TestCase):
         a = a.typedetect()
         a.push_sql(table='test_table', database_kind='sqlite', database='test.sqlite', drop_table = True, create_table=True)
         b = Babe().pull_sql(database_kind='sqlite', database='test.sqlite', table='test_table')
+        buf = StringIO()
+        b.push(stream=buf, format='csv', delimiter=',')
+        self.assertEquals(buf.getvalue(), self.s)
+
+    def test_mysql(self):
+        a = Babe().pull(stream=StringIO(self.s), format='csv')
+        a = a.typedetect()
+        a.push_sql(table='test_table', database_kind='mysql', database='pybabe_test', drop_table = True, create_table=True)
+        b = Babe().pull_sql(database_kind='mysql', database='pybabe_test', table='test_table')
         buf = StringIO()
         b.push(stream=buf, format='csv', delimiter=',')
         self.assertEquals(buf.getvalue(), self.s)

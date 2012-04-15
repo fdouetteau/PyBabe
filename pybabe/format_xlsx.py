@@ -8,9 +8,9 @@ def valuenormalize(cell):
     else: 
         return cell.internal_value
 
-def read(format, instream, name, names, encoding, utf8_cleanup, **kwargs):
+def read(format, stream, name, names, kwargs):
     from openpyxl import load_workbook
-    wb = load_workbook(filename=instream, use_iterators=True)
+    wb = load_workbook(filename=stream, use_iterators=True)
     ws = wb.get_active_sheet()
     it = ws.iter_rows()
     if names: 
