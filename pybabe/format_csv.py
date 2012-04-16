@@ -66,7 +66,7 @@ def push(format, instream, outfile, encoding, delimiter=None, **kwargs):
     for k in instream: 
         if isinstance(k, MetaInfo):
             metainfo = k
-            dialect = metainfo.dialect if metainfo.dialect else default_dialect() 
+            dialect = metainfo.dialect if metainfo.dialect else default_dialect
             if delimiter:
                 dialect.delimiter = delimiter
             writer = UnicodeCSVWriter(outfile, dialect=dialect, encoding=encoding)

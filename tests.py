@@ -9,7 +9,8 @@ from pyftpdlib import ftpserver
 from threading import Thread
 import shutil, tempfile
 import BaseHTTPServer, urllib2
-
+from tempfile import NamedTemporaryFile
+import os
 
 def can_connect_to_the_net(): 
     try:
@@ -482,6 +483,28 @@ class TestSQL(unittest.TestCase):
         buf = StringIO()
         b.push(stream=buf, format='csv', delimiter=',')
         self.assertEquals(buf.getvalue(), self.s)
+
+class TestMemoize(unittest.TestCase):
+    s = 'id,value,s\n1,coucou,4\n2,blabla,5\n3,coucou,6\n4,tutu,4\n'
+    def test_memo(self):
+        tmpfile = NamedTemporaryFile()
+        tmpfile.write(self.s)
+        tmpfile.flush()
+        a = Babe().pull(filename=tmpfile.name, memoize=True, format="csv")
+        buf = StringIO()
+        a.push(stream=buf, format="csv")
+        self.assertEquals(buf.getvalue(), self.s)
+        #os.remove(tmpfile.name)
+        tmpfile.close()
+        self.assertFalse(os.path.exists(tmpfile.name))
+        b = Babe().pull(filename=tmpfile.name, memoize=True, format="csv")
+        buf2 = StringIO()
+        b.push(stream=buf2, format="csv")
+        self.assertEquals(buf2.getvalue(), self.s)
+        c = Babe().pull(filename=tmpfile.name, memoize=False, format="csv")
+        buf3 = StringIO()
+        self.assertRaises(IOError, lambda : c.push(stream=buf3, format="csv"))
+
 
 import code, traceback, signal
 

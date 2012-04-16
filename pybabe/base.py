@@ -7,6 +7,14 @@ from subprocess import Popen, PIPE
 import tempfile
 import shutil
 import ConfigParser
+import cPickle
+
+def my_import(name):
+    mod = __import__(name)
+    components = name.split('.')
+    for comp in components[1:]:
+        mod = getattr(mod, comp)
+    return mod
 
 class MetaInfo(object):
     def __init__(self, name, names, primary_keys = None, dialect=None):
@@ -19,6 +27,36 @@ class MetaInfo(object):
         if not self.name:
             self.name = '__'.join(map(MetaInfo.keynormalize, self.names))
         self.t = namedtuple(self.name, map(MetaInfo.keynormalize, self.names))
+
+    ## Some state to be define for metainfo pickling. 
+
+    def as_dict(self):
+        if self.dialect: 
+            d = { 
+                'dialect' : self.dialect.__dict__, 
+            }
+        else: 
+            d = {}
+        d.update(self.__dict__)
+        del d['t']
+        del d['dialect']
+        return d
+
+    @staticmethod
+    def from_dict(d):
+        name = d.get('name', None)
+        names = d.get('names', None)
+        primary_keys = d.get('primary_keys', None)
+        if 'dialect' in d: 
+            class dialect(Dialect):
+                pass
+            for k, v in d['dialect'].iteritems():
+                setattr(dialect, k, v)
+            dialect_ = dialect
+        else: 
+            dialect_ = None
+        return MetaInfo(name=name, names=names, primary_keys=primary_keys, dialect=dialect_)
+
 
     @classmethod
     def keynormalize(cls, key):
@@ -49,9 +87,6 @@ class MetaInfo(object):
             return '-'.join([str(getattr(row, k)) for k in self.primary_keys])
         else:
             return self.name + '_' + str(linecount)
-
-
-
 
 
 class BabeBase(object):
@@ -160,10 +195,41 @@ def guess_format(compress_format, format, filename):
         return (compress_format, BabeBase.pullExtensions[ext])
     raise Exception("Unable to guess extension")
     
+
+
 def pull(null_stream, **kwargs):
     fileExtension = None
     to_close = []
-    
+
+    mempath = None
+    if kwargs.get('memoize', False): 
+        memoize_directory = kwargs.get('memoize_directory', None)
+        if not memoize_directory: 
+            ## TODO: not portable 
+            memoize_directory = "/tmp/pybabe-memoize-%s" % os.getenv('USER')
+        if not os.path.exists(memoize_directory): 
+            os.mkdir(memoize_directory)
+
+        s = cPickle.dumps(kwargs)
+        hashvalue = hash(s)
+        mempath = os.path.join(memoize_directory, str(hashvalue))
+        if os.path.exists(mempath):
+            f = open(mempath)
+            try:
+                metainfo = None
+                while True:
+                    a = cPickle.load(f)
+                    if isinstance(a, list):
+                        for v in a: 
+                            yield metainfo.t._make(v)
+                    else:
+                        metainfo = MetaInfo.from_dict(a)
+                        yield metainfo
+            except EOFError:
+                f.close()
+                return 
+
+
     # Guess format 
 
     filename = kwargs.get('filename', None)
@@ -223,9 +289,27 @@ def pull(null_stream, **kwargs):
 
     ## Parse high level 
     i = BabeBase.pullFormats[format](format=fileExtension, stream=instream, name=name, names=names, kwargs=kwargs)
-    for r in i: 
-        yield r 
-    
+
+    if kwargs.get('memoize', False):
+        f = open(mempath, "w")
+        buf = []
+        for r in i:
+            if isinstance(r, MetaInfo):
+                cPickle.dump(map(list, buf), f, cPickle.HIGHEST_PROTOCOL)
+                del buf[:]
+                cPickle.dump(r.as_dict(), f, cPickle.HIGHEST_PROTOCOL)
+            else:
+                buf.append(r)
+                if len(buf) >= 1000:
+                    cPickle.dump(map(list, buf), f, cPickle.HIGHEST_PROTOCOL)
+                    del buf[:]
+            yield r
+        cPickle.dump(map(list, buf), f, cPickle.HIGHEST_PROTOCOL)
+        f.close()
+    else:
+        for r in i: 
+            yield r 
+        
     if command:
         p.wait()
         
