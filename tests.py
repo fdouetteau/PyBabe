@@ -59,6 +59,16 @@ class TestZip(unittest.TestCase):
         buf = StringIO() 
         a.push(stream=buf, format='csv')
         self.assertEquals(buf.getvalue(), test_csv_content)
+
+class TestGZ(unittest.TestCase):
+    s = 'city,b,c\nPARIS,foo,bar\nLONDON,coucou,salut\n'
+    def test_gz(self):
+        a = Babe().pull(stream=StringIO(self.s), format='csv', name='Test')
+        a.push(filename='test.csv', compress='test.csv.gz')
+        b = Babe().pull(filename='test.csv.gz')
+        buf = StringIO()
+        b.push(stream=buf, format='csv')
+        self.assertEquals(buf.getvalue(), self.s)
         
 class TestFTP(unittest.TestCase):
     def setUp(self):

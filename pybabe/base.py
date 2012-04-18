@@ -250,7 +250,6 @@ def pull(null_stream, **kwargs):
 
     (compress_format, format)  =  guess_format(compress_format, format, filename)
 
-    
     if 'protocol' in kwargs:
         instream = BabeBase.pullProtocols[kwargs['protocol']](filename, **kwargs)
         to_close.append(instream)
@@ -270,11 +269,11 @@ def pull(null_stream, **kwargs):
         raise Exception("No input stream provided")  
 
 
-    if (compress_format and BabeBase.pullCompressFormatsNeedSeek[compress_format])  or BabeBase.pullFormatsNeedSeek[format]:
+
+    if (compress_format and BabeBase.pullCompressFormatsNeedSeek[compress_format])  or (format and BabeBase.pullFormatsNeedSeek[format]):
         if not hasattr(instream, 'seek'): 
             ## Create a temporary file
             tf = tempfile.NamedTemporaryFile()
-            print "Creating temp file %s" % tf.name
             shutil.copyfileobj(instream, tf)
             tf.flush()
             tf.seek(0)
@@ -283,7 +282,7 @@ def pull(null_stream, **kwargs):
 
     if compress_format:
         (content_list, uncompress) = BabeBase.pullCompressFormats[compress_format]
-        (compress_handle, namelist) = content_list(instream)
+        (compress_handle, namelist) = content_list(instream, filename)
         if len(namelist) > 1:
             raise Exception("Too many file in archive. Only archive with one file supported")
         filename = namelist[0]

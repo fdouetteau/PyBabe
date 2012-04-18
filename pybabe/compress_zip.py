@@ -8,7 +8,7 @@ def compress(compress_outstream, inputfile_filename, inarchive_filename):
      myzip.write(inputfile_filename, inarchive_filename)
      myzip.close()
       
-def get_content_list(compress_instream):
+def get_content_list(compress_instream, filename):
     myzip = ZipFile(compress_instream, 'r')
     return (myzip, myzip.namelist())
      
