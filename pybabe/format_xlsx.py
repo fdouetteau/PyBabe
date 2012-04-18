@@ -1,5 +1,5 @@
 
-from base import MetaInfo, BabeBase
+from base import StreamHeader, BabeBase
 
 def valuenormalize(cell):
     "Build the row value out of a cell"
@@ -14,11 +14,11 @@ def read(format, stream, name, names, kwargs):
     ws = wb.get_active_sheet()
     it = ws.iter_rows()
     if names: 
-        yield MetaInfo(name=name, names = names)
+        yield StreamHeader(name=name, names = names)
     else:
         names_row = it.next()
         names = [cell.internal_value for cell in names_row]
-        metainfo =  MetaInfo(name=name, names=names)
+        metainfo =  StreamHeader(name=name, names=names)
         yield metainfo
     for row in it: # it brings a new method: iter_rows()
         yield metainfo.t._make(map(valuenormalize, row))
@@ -28,7 +28,7 @@ def write(format, instream, outfile, encoding, **kwargs):
     wb = Workbook(optimized_write = True)
     ws = wb.create_sheet()
     for k in instream:
-        if isinstance(k, MetaInfo):
+        if isinstance(k, StreamHeader):
             metainfo = k
             ws.append(metainfo.names)
         else:

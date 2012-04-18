@@ -1,7 +1,7 @@
 #!env/bin/python
 
 from pybabe import Babe
-from pybabe.base import MetaInfo
+from pybabe.base import StreamHeader
 import unittest
 import random
 from cStringIO import StringIO
@@ -22,7 +22,7 @@ def can_connect_to_the_net():
 class TestBasicFunction(unittest.TestCase):
         
     def test_keynormalize(self):
-        self.assertEqual('Payant_Gratuit', MetaInfo.keynormalize('Payant/Gratuit'))
+        self.assertEqual('Payant_Gratuit', StreamHeader.keynormalize('Payant/Gratuit'))
     
     def test_pull_process(self):
         babe = Babe()

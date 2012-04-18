@@ -1,5 +1,5 @@
 
-from base import MetaInfo, BabeBase
+from base import StreamHeader, BabeBase
 import csv
 
 def log(stream, logfile):
@@ -10,7 +10,7 @@ def log(stream, logfile):
         logstream = logfile
         do_close = False
     for row in stream:
-        if isinstance(row, MetaInfo):
+        if isinstance(row, StreamHeader):
             writer = csv.writer(logstream, row.dialect)
             writer.writerow(row.names)
         else:

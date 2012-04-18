@@ -16,7 +16,7 @@ def my_import(name):
         mod = getattr(mod, comp)
     return mod
 
-class MetaInfo(object):
+class StreamHeader(object):
     def __init__(self, name, names, primary_keys = None, dialect=None):
         self.dialect = dialect
         self.names = names
@@ -25,8 +25,8 @@ class MetaInfo(object):
         if isinstance(primary_keys, basestring): 
             self.primary_keys = [primary_keys]
         if not self.name:
-            self.name = '__'.join(map(MetaInfo.keynormalize, self.names))
-        self.t = namedtuple(self.name, map(MetaInfo.keynormalize, self.names))
+            self.name = '__'.join(map(StreamHeader.keynormalize, self.names))
+        self.t = namedtuple(self.name, map(StreamHeader.keynormalize, self.names))
 
     ## Some state to be define for metainfo pickling. 
 
@@ -55,7 +55,7 @@ class MetaInfo(object):
             dialect_ = dialect
         else: 
             dialect_ = None
-        return MetaInfo(name=name, names=names, primary_keys=primary_keys, dialect=dialect_)
+        return StreamHeader(name=name, names=names, primary_keys=primary_keys, dialect=dialect_)
 
 
     @classmethod
@@ -70,12 +70,12 @@ class MetaInfo(object):
 
 
     def insert(self, name, names):
-        return MetaInfo(name=name if name else self.name,
+        return StreamHeader(name=name if name else self.name,
             names=self.names + names,
             dialect=self.dialect)
 
     def replace(self, name, names):
-        return MetaInfo(name=name if name else self.name,
+        return StreamHeader(name=name if name else self.name,
         names=names,
          dialect=self.dialect)
 
@@ -223,7 +223,7 @@ def pull(null_stream, **kwargs):
                         for v in a: 
                             yield metainfo.t._make(v)
                     else:
-                        metainfo = MetaInfo.from_dict(a)
+                        metainfo = StreamHeader.from_dict(a)
                         yield metainfo
             except EOFError:
                 f.close()
@@ -294,7 +294,7 @@ def pull(null_stream, **kwargs):
         f = open(mempath, "w")
         buf = []
         for r in i:
-            if isinstance(r, MetaInfo):
+            if isinstance(r, StreamHeader):
                 cPickle.dump(map(list, buf), f, cPickle.HIGHEST_PROTOCOL)
                 del buf[:]
                 cPickle.dump(r.as_dict(), f, cPickle.HIGHEST_PROTOCOL)

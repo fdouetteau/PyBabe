@@ -1,6 +1,6 @@
 
 import re, itertools
-from base import MetaInfo, BabeBase
+from base import StreamHeader, BabeBase
 from timeparse import parse_date, parse_datetime
 from collections import deque
 
@@ -16,7 +16,7 @@ def typedetect(stream):
     return itertools.imap(typefilter, stream)
 
 def typefilter(elt):
-    if isinstance(elt, MetaInfo):
+    if isinstance(elt, StreamHeader):
         return elt
     else:
         d = {}
@@ -46,7 +46,7 @@ def primary_key_detect(stream, max=None):
     it = iter(stream)
     for linecount, row in enumerate(it):
         d.append(row)
-        if isinstance(row,MetaInfo): 
+        if isinstance(row,StreamHeader): 
             metainfo = row
             values = [set() for k in metainfo.names]
             keys = set(xrange(0,len(metainfo.names)))

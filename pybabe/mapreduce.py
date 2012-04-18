@@ -1,5 +1,5 @@
 
-from base import MetaInfo, BabeBase
+from base import StreamHeader, BabeBase
 from tempfile import TemporaryFile
 import cPickle
 import heapq
@@ -8,7 +8,7 @@ import itertools
 def sort(stream, key):
     buf = []
     for elt in stream:
-        if isinstance(elt, MetaInfo):
+        if isinstance(elt, StreamHeader):
             yield elt
         else:
             buf.append(elt)
@@ -24,7 +24,7 @@ def sort_diskbased(stream, key, nsize=100000):
     count = 0 
     t = None
     for elt in stream: 
-        if isinstance(elt, MetaInfo):
+        if isinstance(elt, StreamHeader):
             t = elt.t 
             yield elt
         else:
@@ -94,7 +94,7 @@ Otherwise can be a 'Reducer' object.
         stream = sort(stream, key)
     pk = None
     for elt in stream:
-        if isinstance(elt, MetaInfo):
+        if isinstance(elt, StreamHeader):
             if columns or name:
                 metainfo = elt.replace(name=name, names=columns)
             else:
@@ -135,7 +135,7 @@ if an object, reducer.begin_group(), reducer.row() and reducer.end_group() will 
     reducer = build_reducer(reducer)
     reducer.begin_group(None)
     for elt in stream:
-        if isinstance(elt, MetaInfo):
+        if isinstance(elt, StreamHeader):
             if name or columns:
                 metainfo = elt.replace(name, columns)
             else:

@@ -1,5 +1,5 @@
 
-from base import BabeBase, MetaInfo
+from base import BabeBase, StreamHeader
 
 # Get the tokens from https://dev.twitter.com/docs/auth/tokens-devtwittercom
 
@@ -58,7 +58,7 @@ def pull_twitter(false_stream, consumer_key=None,consumer_secret=None,access_tok
         flatten_status(u)
         if not metainfo:
             names = build_status_names(u)
-            metainfo = MetaInfo(name="Status", names=names)
+            metainfo = StreamHeader(name="Status", names=names)
             yield metainfo
         u.__class__.__iter__ = lambda s: iter([getattr(s, key) for key in names])
         yield u

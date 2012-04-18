@@ -1,16 +1,16 @@
 
-from base import BabeBase, MetaInfo
+from base import BabeBase, StreamHeader
 
 
 def dedup(stream, primary_keys=False, columns = None):
 	"""
 Deduplicate a stream
 If columns is specified only apply the  deduplication on the specified columns
-If primary_keys is True only apply the deduplication based on the field marked as "primary in MetaInfo
+If primary_keys is True only apply the deduplication based on the field marked as "primary in StreamHeader
 Otherwise apply the deduplication over all values. 
 	"""
 	for row in stream:
-		if isinstance(row, MetaInfo):
+		if isinstance(row, StreamHeader):
 			metainfo = row
 			if primary_keys:
 				columns = metainfo.primary_keys

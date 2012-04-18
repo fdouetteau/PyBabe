@@ -1,6 +1,6 @@
 
 
-from base import MetaInfo, BabeBase
+from base import StreamHeader, BabeBase
 
 def valuenormalize(cell):
     return cell.value 
@@ -11,13 +11,13 @@ def read(format, stream, name, names, kwargs):
     ws = wb.sheet_by_index(0)
     nrows = ws.nrows
     if names: 
-        yield MetaInfo(name=name, names = names)
+        yield StreamHeader(name=name, names = names)
     	b = 0 
     else:
     	b = 1
         names_row = ws.row(0)
         names = [cell.value for cell in names_row]
-        metainfo =  MetaInfo(name=name, names=names)
+        metainfo =  StreamHeader(name=name, names=names)
         yield metainfo
     	for i in xrange(b, nrows):
             cells = ws.row(i)

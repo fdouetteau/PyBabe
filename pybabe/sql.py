@@ -1,6 +1,6 @@
 
 
-from base import BabeBase, MetaInfo
+from base import BabeBase, StreamHeader
 import csv
 from subprocess import Popen, PIPE
 import time
@@ -86,7 +86,7 @@ def pull_sql(false_stream, query=None, table=None, host=None, database_kind=None
     dialect = sql_dialect()
     reader = csv.reader(p.stdout, dialect=dialect)        
     names = reader.next()
-    metainfo = MetaInfo(name=table, dialect=dialect, names=names)
+    metainfo = StreamHeader(name=table, dialect=dialect, names=names)
     yield metainfo
     for row in reader:
         yield metainfo.t._make([unicode(x, 'utf-8') for x in row])
@@ -123,7 +123,7 @@ def push_sql(stream, database_kind, table=None, host=None, create_table = False,
     p = Popen(c, stdin=PIPE, stdout=None, stderr=None)
 
     for row in stream:
-        if isinstance(row, MetaInfo):
+        if isinstance(row, StreamHeader):
             metainfo = row
             if not table: 
                 table = metainfo.name

@@ -1,5 +1,5 @@
 
-from base import MetaInfo, BabeBase
+from base import StreamHeader, BabeBase
 import heapq
 import itertools 
 
@@ -8,7 +8,7 @@ class Guard(object):
     def __init__(self):
         self.metainfo = None
     def filter(self, elt):
-        if isinstance(elt, MetaInfo):
+        if isinstance(elt, StreamHeader):
             self.metainfo = elt
             return False
         else:
@@ -18,7 +18,7 @@ def minmaxN(stream, column, n, max=True):
     "Keep the n rows maximizing value for 'column'"
     itt = iter(stream)
     elt = itt.next()
-    if not isinstance(elt, MetaInfo):
+    if not isinstance(elt, StreamHeader):
         raise Exception("Missing metainfo")
     yield elt 
     while True:

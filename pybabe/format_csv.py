@@ -1,5 +1,5 @@
 
-from base import BabeBase, MetaInfo
+from base import BabeBase, StreamHeader
 import csv
 from charset import UTF8Recoder, UTF8RecoderWithCleanup, PrefixReader, UnicodeCSVWriter
 import codecs
@@ -7,12 +7,12 @@ import codecs
 def linepull(stream, name, names, dialect, kwargs):
     it = iter(stream)
     if names:
-        metainfo = MetaInfo(name=name, names=names, dialect=dialect)
+        metainfo = StreamHeader(name=name, names=names, dialect=dialect)
         yield metainfo
     else:
         row = it.next()
         row = row.rstrip('\r\n')
-        metainfo = MetaInfo(name=name, names=[row], dialect=dialect)
+        metainfo = StreamHeader(name=name, names=[row], dialect=dialect)
         yield metainfo
     for row in it:
         yield metainfo.t._make([row.rstrip('\r\n')])
@@ -21,7 +21,7 @@ def csvpull(stream, name, names, dialect, kwargs):
     reader = csv.reader(stream, dialect)        
     if not names:
         names = reader.next()
-    metainfo = MetaInfo(name=name, dialect=dialect, names=names, primary_keys=kwargs.get('primary_key', kwargs.get('primary_keys', None)))
+    metainfo = StreamHeader(name=name, dialect=dialect, names=names, primary_keys=kwargs.get('primary_key', kwargs.get('primary_keys', None)))
     yield metainfo
     for row in reader:
         if name == 'ls': 
@@ -64,7 +64,7 @@ def push(format, instream, outfile, encoding, delimiter=None, **kwargs):
     if not encoding:
         encoding = "utf8"
     for k in instream: 
-        if isinstance(k, MetaInfo):
+        if isinstance(k, StreamHeader):
             metainfo = k
             dialect = metainfo.dialect if metainfo.dialect else default_dialect
             if delimiter:
