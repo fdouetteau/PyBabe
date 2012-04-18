@@ -16,7 +16,10 @@ def my_import(name):
         mod = getattr(mod, comp)
     return mod
 
-class StreamHeader(object):
+class StreamMeta(object): 
+    pass
+
+class StreamHeader(StreamMeta):
     def __init__(self, name, names, primary_keys = None, dialect=None):
         self.dialect = dialect
         self.names = names
@@ -88,6 +91,8 @@ class StreamHeader(object):
         else:
             return self.name + '_' + str(linecount)
 
+class StreamFooter(StreamMeta): 
+    pass 
 
 class BabeBase(object):
 
@@ -222,6 +227,8 @@ def pull(null_stream, **kwargs):
                     if isinstance(a, list):
                         for v in a: 
                             yield metainfo.t._make(v)
+                    elif isinstance(a, StreamFooter):
+                        yield a 
                     else:
                         metainfo = StreamHeader.from_dict(a)
                         yield metainfo
@@ -240,8 +247,6 @@ def pull(null_stream, **kwargs):
     name = kwargs.get('name', None)
     names = kwargs.get('names', None)
     format = kwargs.get('format', None)
-    encoding = kwargs.get('encoding', None)
-    utf8_cleanup = kwargs.get('utf8_cleanup', False)
 
     (compress_format, format)  =  guess_format(compress_format, format, filename)
 
@@ -298,13 +303,16 @@ def pull(null_stream, **kwargs):
                 cPickle.dump(map(list, buf), f, cPickle.HIGHEST_PROTOCOL)
                 del buf[:]
                 cPickle.dump(r.as_dict(), f, cPickle.HIGHEST_PROTOCOL)
+            elif isinstance(r, StreamFooter):
+                cPickle.dump(map(list, buf), f, cPickle.HIGHEST_PROTOCOL)
+                del buf[:]
+                cPickle.dump(r, f, cPickle.HIGHEST_PROTOCOL)
             else:
                 buf.append(r)
                 if len(buf) >= 1000:
                     cPickle.dump(map(list, buf), f, cPickle.HIGHEST_PROTOCOL)
                     del buf[:]
             yield r
-        cPickle.dump(map(list, buf), f, cPickle.HIGHEST_PROTOCOL)
         f.close()
     else:
         for r in i: 
@@ -371,7 +379,9 @@ def push(instream, filename=None, stream = None, format=None, encoding=None, pro
         to_close.append(outstream)
         
     # Actually write the file. 
-    BabeBase.pushFormats[format](fileExtension, instream, outstream, encoding, **kwargs)
+    it = iter(instream)
+    metainfo = it.next()
+    BabeBase.pushFormats[format](fileExtension, metainfo, it, outstream, encoding, **kwargs)
     outstream.flush()
     
     if compress_format:

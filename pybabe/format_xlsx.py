@@ -1,5 +1,5 @@
 
-from base import StreamHeader, BabeBase
+from base import StreamHeader, BabeBase, StreamFooter
 
 def valuenormalize(cell):
     "Build the row value out of a cell"
@@ -22,15 +22,16 @@ def read(format, stream, name, names, kwargs):
         yield metainfo
     for row in it: # it brings a new method: iter_rows()
         yield metainfo.t._make(map(valuenormalize, row))
+    yield StreamFooter()
 
-def write(format, instream, outfile, encoding, **kwargs):
+def write(format, metainfo, instream, outfile, encoding, **kwargs):
     from openpyxl import Workbook
     wb = Workbook(optimized_write = True)
     ws = wb.create_sheet()
+    ws.append(metainfo.names)
     for k in instream:
-        if isinstance(k, StreamHeader):
-            metainfo = k
-            ws.append(metainfo.names)
+        if isinstance(k, StreamFooter):
+            break
         else:
             ws.append(list(k))
     wb.save(outfile)

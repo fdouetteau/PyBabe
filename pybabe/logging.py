@@ -1,5 +1,5 @@
 
-from base import StreamHeader, BabeBase
+from base import StreamHeader, BabeBase, StreamMeta
 import csv
 
 def log(stream, logfile):
@@ -13,6 +13,8 @@ def log(stream, logfile):
         if isinstance(row, StreamHeader):
             writer = csv.writer(logstream, row.dialect)
             writer.writerow(row.names)
+        elif isinstance(row, StreamMeta):
+            pass
         else:
             writer.writerow(list(row))
         yield row

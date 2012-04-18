@@ -1,5 +1,5 @@
 
-from base import BabeBase, StreamHeader
+from base import BabeBase, StreamHeader, StreamMeta
 
 
 def dedup(stream, primary_keys=False, columns = None):
@@ -20,6 +20,8 @@ Otherwise apply the deduplication over all values.
 				indexes = None
 			s = set()
 			yield row
+		elif isinstance(row, StreamMeta):
+			yield row 
 		else:
 			if indexes:
 				l = list(row)

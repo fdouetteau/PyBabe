@@ -1,6 +1,6 @@
 
 
-from base import BabeBase, StreamHeader
+from base import BabeBase, StreamHeader, StreamFooter
 from pymongo import Connection 
 
 def push_mongo(instream, db, collection, **kwargs):
@@ -15,12 +15,13 @@ def push_mongo(instream, db, collection, **kwargs):
 		if isinstance(row, StreamHeader):
 			metainfo = row
 			count = 1
+		elif isinstance(row, StreamFooter):
+			pass
 		else:
 			d = row._asdict()
 			count = count+1
 			d["_id"] = metainfo.get_primary_identifier(row, count)
 			coll.insert(d)
-
 
 def pull_mongo(false_stream, db, collection, spec=None, name=None, names=None, primary_keys = ["id"], **kwargs): 
 	"""
@@ -38,6 +39,8 @@ def pull_mongo(false_stream, db, collection, spec=None, name=None, names=None, p
 		if not 'id' in doc: 
 			doc['id'] = doc['_id']
 		yield metainfo.t(*[doc[k] for k in names])
+	if metainfo: 	
+		yield StreamFooter()
 
 BabeBase.registerFinalMethod("push_mongo", push_mongo)
 BabeBase.register("pull_mongo", pull_mongo)

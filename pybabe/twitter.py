@@ -1,5 +1,5 @@
 
-from base import BabeBase, StreamHeader
+from base import BabeBase, StreamHeader, StreamFooter
 
 # Get the tokens from https://dev.twitter.com/docs/auth/tokens-devtwittercom
 
@@ -62,5 +62,6 @@ def pull_twitter(false_stream, consumer_key=None,consumer_secret=None,access_tok
             yield metainfo
         u.__class__.__iter__ = lambda s: iter([getattr(s, key) for key in names])
         yield u
-     
+    yield StreamFooter()
+
 BabeBase.register('pull_twitter', pull_twitter)

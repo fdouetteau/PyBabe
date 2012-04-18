@@ -1,6 +1,6 @@
 
 
-from base import StreamHeader, BabeBase
+from base import StreamHeader, BabeBase, StreamFooter
 
 def valuenormalize(cell):
     return cell.value 
@@ -22,5 +22,6 @@ def read(format, stream, name, names, kwargs):
     	for i in xrange(b, nrows):
             cells = ws.row(i)
             yield metainfo.t._make(map(valuenormalize, cells))
+    yield StreamFooter()
 
 BabeBase.addPullPlugin('xls', ['xls'], read, need_seek=False)

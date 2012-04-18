@@ -11,12 +11,13 @@ import shutil, tempfile
 import BaseHTTPServer, urllib2
 from tempfile import NamedTemporaryFile
 import os
+import socket 
 
 def can_connect_to_the_net(): 
     try:
         socket.gethostbyname('www.google.com')
         return True
-    except: 
+    except Exception,e: 
         return False
 
 class TestBasicFunction(unittest.TestCase):
@@ -478,8 +479,8 @@ class TestSQL(unittest.TestCase):
     def test_mysql(self):
         a = Babe().pull(stream=StringIO(self.s), format='csv')
         a = a.typedetect()
-        a.push_sql(table='test_table', database_kind='mysql', database='pybabe_test', drop_table = True, create_table=True)
-        b = Babe().pull_sql(database_kind='mysql', database='pybabe_test', table='test_table')
+        a.push_sql(table='test_table', database_kind='mysql', user='root', database='pybabe_test', drop_table = True, create_table=True)
+        b = Babe().pull_sql(database_kind='mysql', user='root', database='pybabe_test', table='test_table')
         buf = StringIO()
         b.push(stream=buf, format='csv', delimiter=',')
         self.assertEquals(buf.getvalue(), self.s)

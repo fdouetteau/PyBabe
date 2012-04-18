@@ -1,5 +1,5 @@
 
-from base import StreamHeader, BabeBase
+from base import StreamHeader, BabeBase, StreamFooter
 from tempfile import TemporaryFile
 import cPickle
 import heapq
@@ -10,11 +10,13 @@ def sort(stream, key):
     for elt in stream:
         if isinstance(elt, StreamHeader):
             yield elt
+        elif isinstance(elt, StreamFooter):
+            buf.sort(key=lambda obj: getattr(obj, key))
+            for row in buf:
+                yield row
+            yield elt
         else:
             buf.append(elt)
-    buf.sort(key=lambda obj: getattr(obj, key))
-    for elt in buf:
-        yield elt
         
 BabeBase.register('sort', sort)        
 
@@ -23,9 +25,22 @@ def sort_diskbased(stream, key, nsize=100000):
     files = []
     count = 0 
     t = None
+    def iter_on_file(f):
+        try:
+            while True:
+                (key, v) = cPickle.load(f)
+                yield (key, t._make(v))
+        except EOFError:
+            f.close()
     for elt in stream: 
         if isinstance(elt, StreamHeader):
             t = elt.t 
+            yield elt
+        elif isinstance(elt, StreamFooter):
+            buf.sort()
+            iterables = [iter_on_file(f) for f in files] + [itertools.imap(lambda obj : (getattr(obj, key), obj), buf)]
+            for (k, row) in  heapq.merge(*iterables):
+                yield row 
             yield elt
         else:
             buf.append(elt)
@@ -38,18 +53,7 @@ def sort_diskbased(stream, key, nsize=100000):
                 f.flush()
                 files.append(f)
                 del buf[:]
-    def iter_on_file(f):
-        try:
-            while True:
-                (key, v) = cPickle.load(f)
-                yield (key, t._make(v))
-        except EOFError:
-            f.close()
-    buf.sort()
-    iterables = [iter_on_file(f) for f in files] + [itertools.imap(lambda obj : (getattr(obj, key), obj), buf)]
-    for (k, row) in  heapq.merge(*iterables):
-        yield row 
-
+    
 BabeBase.register('sort_diskbased', sort_diskbased)
     
 class Reducer(object):
@@ -100,6 +104,15 @@ Otherwise can be a 'Reducer' object.
             else:
                 metainfo = elt
             yield metainfo
+        elif isinstance(elt, StreamFooter):
+            if pk is not None:
+                eg = reducer.end_group(metainfo.t)
+                if isinstance(eg, list):
+                    for e in eg:
+                        yield e 
+                else:
+                    yield eg 
+            yield elt 
         else:
             k = getattr(elt, key)
             if k == pk:
@@ -115,13 +128,7 @@ Otherwise can be a 'Reducer' object.
                 pk = k 
                 reducer.begin_group(k)
                 reducer.row(elt)
-    if pk is not None:
-        eg = reducer.end_group(metainfo.t)
-        if isinstance(eg, list):
-            for e in eg:
-                yield e 
-        else:
-            yield eg 
+
             
 BabeBase.register('groupBy', groupBy)
     
@@ -141,8 +148,10 @@ if an object, reducer.begin_group(), reducer.row() and reducer.end_group() will 
             else:
                 metainfo = elt
             yield metainfo
+        elif isinstance(elt, StreamFooter):
+            yield reducer.end_group(metainfo.t)
+            yield elt        
         else:
             reducer.row(elt)
-    yield reducer.end_group(metainfo.t)
-                        
+                            
 BabeBase.register('groupAll', groupAll)

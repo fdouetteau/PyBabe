@@ -1,6 +1,6 @@
 
 
-from base import BabeBase, StreamHeader
+from base import BabeBase, StreamHeader, StreamFooter
 import csv
 from subprocess import Popen, PIPE
 import time
@@ -41,10 +41,12 @@ PUSH_DB = {
     }, 
     'mysql' : 
     { 
-        'command' : ['mysql'], 
+        'command' : ['mysql', '--local-infile'], 
+        'user' : '-u%s',
+        'password' : '-p%s',
         'drop_table' : 'DROP TABLE IF EXISTS %s;\n', 
         'create_table' : 'CREATE TABLE IF NOT EXISTS %s ( %s );\n', 
-        'import_query' : "LOAD DATA INFILE '%s' INTO TABLE %s FIELDS TERMINATED BY '\t'"
+        'import_query' : "LOAD DATA LOCAL INFILE '%s' INTO TABLE %s FIELDS TERMINATED BY '\t';\n"
     }
 }
 
@@ -146,7 +148,7 @@ def push_sql(stream, database_kind, table=None, host=None, create_table = False,
             p.stdin.write(import_query)
             p.stdin.flush()
             writestream = None
-            for retry in xrange(0,5):
+            for retry in xrange(0,7):
                 try:
                     fd = os.open(filename, os.O_WRONLY | os.O_NONBLOCK)
                     writestream = os.fdopen(fd, 'w')
@@ -155,13 +157,14 @@ def push_sql(stream, database_kind, table=None, host=None, create_table = False,
                         raise e
                     time.sleep(0.5)
             writer = csv.writer(writestream, dialect=sql_dialect()) 
+        elif isinstance(row, StreamFooter):
+            writestream.close()
+            os.remove(filename)
+            os.rmdir(tmpdir)
+            p.stdin.close()
+            p.wait()
         else:
             writer.writerow(row)
-    writestream.close()
-    os.remove(filename)
-    os.rmdir(tmpdir)
-    p.stdin.close()
-    p.wait()
 
 
 BabeBase.register('pull_sql', pull_sql)
