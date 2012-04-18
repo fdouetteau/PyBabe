@@ -8,6 +8,8 @@ import tempfile
 import shutil
 import ConfigParser
 import cPickle
+from string import Template
+from cStringIO import StringIO
 
 def my_import(name):
     mod = __import__(name)
@@ -20,7 +22,7 @@ class StreamMeta(object):
     pass
 
 class StreamHeader(StreamMeta):
-    def __init__(self, name, names, primary_keys = None, dialect=None):
+    def __init__(self, name, names, primary_keys = None, t = None,  dialect=None):
         self.dialect = dialect
         self.names = names
         self.name = name
@@ -29,9 +31,11 @@ class StreamHeader(StreamMeta):
             self.primary_keys = [primary_keys]
         if not self.name:
             self.name = '__'.join(map(StreamHeader.keynormalize, self.names))
-        self.t = namedtuple(self.name, map(StreamHeader.keynormalize, self.names))
+        self.t = t if t else namedtuple(self.name, map(StreamHeader.keynormalize, self.names))
 
     ## Some state to be define for metainfo pickling. 
+
+
 
     def as_dict(self):
         if self.dialect: 
@@ -71,15 +75,14 @@ class StreamHeader(StreamMeta):
             s = 'd_' + s
         return s
 
-
     def insert(self, name, names):
         return StreamHeader(name=name if name else self.name,
             names=self.names + names,
             dialect=self.dialect)
 
-    def replace(self, name, names):
+    def replace(self, name=None, names=None):
         return StreamHeader(name=name if name else self.name,
-        names=names,
+        names=names if names else self.names, t = self.t if not names else None, 
          dialect=self.dialect)
 
     def get_primary_identifier(self, row, linecount):
@@ -326,11 +329,14 @@ def pull(null_stream, **kwargs):
         
 BabeBase.register('pull', pull)
         
-def push(instream, filename=None, stream = None, format=None, encoding=None, protocol=None, compress=None, **kwargs):
+def push(instream, filename=None, filename_template = None, directory = None, stream = None, format=None, encoding=None, protocol=None, compress=None, stream_dict=None, **kwargs):
     outstream = None
     compress_format = None
     fileExtension = None
     to_close = []
+
+
+
     if filename: 
         fileBaseName, fileExtension = os.path.splitext(filename) 
         fileExtension = fileExtension.lower()
@@ -365,39 +371,56 @@ def push(instream, filename=None, stream = None, format=None, encoding=None, pro
         if early_check:
             print "Early check"
             early_check(**kwargs)
-        
-    
-    # If external protocol or compression, write to a temporary file. 
-    if protocol or compress:
-        outstream = tempfile.NamedTemporaryFile()
-        to_close.append(outstream)
-    elif stream: 
-        outstream = stream
-    else: 
-        outstream = open(filename, 'wb')
-        to_close.append(outstream)
-        
-    # Actually write the file. 
+
+
     it = iter(instream)
-    metainfo = it.next()
-    BabeBase.pushFormats[format](fileExtension, metainfo, it, outstream, encoding, **kwargs)
-    outstream.flush()
-    
-    if compress_format:
-        # Apply file compression. If output protocol, use a temporary file name 
-        if protocol:
-            compress_file = tempfile.NamedTemporaryFile()
-        else:
-            compress_file = compress
-        BabeBase.pushCompressFormats[compress_format](compress_file, outstream.name, filename)
-        outstream = compress_file
+    while True:
+        try: 
+            header = it.next()
+        except StopIteration: 
+            break 
+
+        if not filename and header.name and filename_template:
+            filename = Template(filename_template).substitute(name=header.name)
+
+        if directory and filename:
+            filename = os.path.join(directory, filename)
+
+
+        # If external protocol or compression, write to a temporary file. 
+        if protocol or compress:
+            outstream = tempfile.NamedTemporaryFile()
+            to_close.append(outstream)
+        elif stream_dict != None: 
+            n = filename if filename else header.name
+            if not n  in stream_dict:
+                stream_dict[n] = StringIO()
+            outstream = stream_dict[n]
+        elif stream: 
+            outstream = stream
+        else: 
+            outstream = open(filename, 'wb')
+            to_close.append(outstream)
             
-    # Apply protocol 
-    if protocol:
-        BabeBase.pushProtocols[protocol][1](outstream.name, filename, **kwargs)
-    
-    for s in to_close:
-        s.close()
+        # Actually write the file. 
+        BabeBase.pushFormats[format](fileExtension, header, it, outstream, encoding, **kwargs)
+        outstream.flush()
+        
+        if compress_format:
+            # Apply file compression. If output protocol, use a temporary file name 
+            if protocol:
+                compress_file = tempfile.NamedTemporaryFile()
+            else:
+                compress_file = compress
+            BabeBase.pushCompressFormats[compress_format](compress_file, outstream.name, filename)
+            outstream = compress_file
+                
+        # Apply protocol 
+        if protocol:
+            BabeBase.pushProtocols[protocol][1](outstream.name, filename, **kwargs)
+        
+        for s in to_close:
+            s.close()
 
 BabeBase.registerFinalMethod('push', push)
         

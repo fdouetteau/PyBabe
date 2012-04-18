@@ -516,6 +516,16 @@ class TestMemoize(unittest.TestCase):
         buf3 = StringIO()
         self.assertRaises(IOError, lambda : c.push(stream=buf3, format="csv"))
 
+class TestPartition(unittest.TestCase):
+    s = 'date,name,value\n2012-04-04,John,1\n2012-04-04,Luke,2\n2012-04-05,John,1\n'
+
+    def test_partition(self):
+        a = Babe().pull(stream=StringIO(self.s), format='csv')
+        a = a.partition(column = 'date')
+        d = {}
+        a.push(stream_dict=d, format="csv")
+        self.assertEquals(d['2012-04-04'].getvalue(), 'date,name,value\n2012-04-04,John,1\n2012-04-04,Luke,2\n')
+        self.assertEquals(d['2012-04-05'].getvalue(), 'date,name,value\n2012-04-05,John,1\n')
 
 import code, traceback, signal
 
