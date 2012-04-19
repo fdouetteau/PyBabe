@@ -12,6 +12,7 @@ import BaseHTTPServer, urllib2
 from tempfile import NamedTemporaryFile
 import os
 import socket 
+from unittest2 import TestCase, skipUnless
 
 def can_connect_to_the_net(): 
     try:
@@ -20,7 +21,7 @@ def can_connect_to_the_net():
     except Exception,e: 
         return False
 
-class TestBasicFunction(unittest.TestCase):
+class TestBasicFunction(TestCase):
         
     def test_keynormalize(self):
         self.assertEqual('Payant_Gratuit', StreamHeader.keynormalize('Payant/Gratuit'))
@@ -47,7 +48,7 @@ class TestBasicFunction(unittest.TestCase):
         
 test_csv_content = """foo\tbar\tf\td\n1\t2\t3.2\t2010/10/02\n3\t4\t1.2\t2011/02/02\n"""
         
-class TestZip(unittest.TestCase):
+class TestZip(TestCase):
     s = "a,b\n1,2\n3,4\n"
     def test_zip(self):
         babe = Babe()
@@ -66,7 +67,7 @@ class TestZip(unittest.TestCase):
         a.push(stream=buf, format='csv')
         self.assertEquals(buf.getvalue(), test_csv_content)
 
-class TestGZ(unittest.TestCase):
+class TestGZ(TestCase):
     s = 'city,b,c\nPARIS,foo,bar\nLONDON,coucou,salut\n'
     def test_gz(self):
         a = Babe().pull(stream=StringIO(self.s), format='csv', name='Test')
@@ -76,7 +77,7 @@ class TestGZ(unittest.TestCase):
         b.push(stream=buf, format='csv')
         self.assertEquals(buf.getvalue(), self.s)
         
-class TestFTP(unittest.TestCase):
+class TestFTP(TestCase):
     def setUp(self):
         self.port = random.choice(range(9000,11000))
         authorizer = ftpserver.DummyAuthorizer()
@@ -121,7 +122,7 @@ class TestFTP(unittest.TestCase):
         a.push(filename='test.csv', compress='test.zip', protocol='ftp', user=self.user, password=self.password, host='localhost', port=self.port, protocol_early_check=False)
         
         
-class TestCharset(unittest.TestCase):
+class TestCharset(TestCase):
     def test_writeutf16(self):
         babe = Babe()
         a = babe.pull(filename='tests/test.csv', name='Test')
@@ -138,7 +139,7 @@ class TestCharset(unittest.TestCase):
         a = babe.pull(filename='tests/test_badencoded.csv', name='Test')
         a.push(filename='tests/test_badencoded_out2.csv')
 
-class TestSort(unittest.TestCase): 
+class TestSort(TestCase): 
     def test_sort(self):
         babe = Babe()
         s = '\n'.join(['k,v'] + [ '%u,%u' % (i,-i) for i in xrange(0,100001)])
@@ -162,7 +163,7 @@ class TestSort(unittest.TestCase):
         self.assertEquals(buf.getvalue(), 'k,v\n100000,-100000\n')        
 
     
-class TestExcel(unittest.TestCase):
+class TestExcel(TestCase):
     
     def test_excel_read_write(self):
         babe = Babe()
@@ -170,7 +171,7 @@ class TestExcel(unittest.TestCase):
         b = b.mapTo(lambda row: row._replace(Foo=-row.Foo))
         b.push(filename='tests/test2.xlsx')
 
-class TestTransform(unittest.TestCase):
+class TestTransform(TestCase):
     def test_split(self):
         babe = Babe()
         buf = StringIO("""a,b
@@ -196,7 +197,7 @@ class TestTransform(unittest.TestCase):
         self.assertEquals(buf.getvalue(), self.s2)
 
 
-class TestHTTP(unittest.TestCase):
+class TestHTTP(TestCase):
     def setUp(self):
         self.port = random.choice(range(9000,11000))
         server_address = ('', self.port)
@@ -241,8 +242,8 @@ class TestHTTP(unittest.TestCase):
         a.push(stream=buf, format='csv')
         self.assertEquals(buf.getvalue(), 'foo\tbar\tf\td\n1\t2\t3.2\t2010/10/02\n3\t4\t1.2\t2011/02/02\n')
 
-class TestS3(unittest.TestCase):
-    @unittest.skipUnless(can_connect_to_the_net(), 'Requires net connection')
+class TestS3(TestCase):
+    @skipUnless(can_connect_to_the_net(), 'Requires net connection')
     def test_s3(self):
         s = "a,b\n1,2\n3,4\n"
         buf1 = StringIO(s)
@@ -253,7 +254,7 @@ class TestS3(unittest.TestCase):
         b.push(stream=buf, format='csv')
         self.assertEquals(buf.getvalue(), s)
         
-class TestMapTo(unittest.TestCase):
+class TestMapTo(TestCase):
     def test_tuple(self):
         a = Babe().pull(filename='tests/test.csv', name='Test').typedetect()
         a = a.mapTo(lambda obj : obj._replace(foo=obj.foo + 1))
@@ -285,7 +286,7 @@ class TestMapTo(unittest.TestCase):
         s = """a\tb\n2\t4\n4\t8\n"""
         self.assertEquals(buf.getvalue(), s)
         
-class TestFlatMap(unittest.TestCase):
+class TestFlatMap(TestCase):
     def test_tuple(self):
         a = Babe().pull(stream=StringIO("a,b\n1,2:3\n4,5:6\n"), format="csv")
         a = a.flatMap(lambda row: [row._replace(b=i) for i in row.b.split(':')])
@@ -293,7 +294,7 @@ class TestFlatMap(unittest.TestCase):
         a.push(stream=buf, format="csv")
         self.assertEquals(buf.getvalue(), "a,b\n1,2\n1,3\n4,5\n4,6\n")
 
-class TestGroup(unittest.TestCase):
+class TestGroup(TestCase):
     def test_groupby(self):
         a = Babe().pull(stream=StringIO('a,b\n1,2\n3,4\n1,4\n'), format="csv").typedetect()
         a = a.groupBy(key="a", reducer=lambda key, rows: (key, sum([row.b for row in rows])))
@@ -308,7 +309,7 @@ class TestGroup(unittest.TestCase):
         a.push(stream=buf, format="csv")
         self.assertEquals(buf.getvalue(), "max\n4\n")
         
-class TestFilterColumns(unittest.TestCase):
+class TestFilterColumns(TestCase):
     def test_filter(self):
         a = Babe().pull(stream=StringIO('a,b\n1,2\n3,4\n1,4\n'), format="csv").typedetect()
         a = a.filterColumns(keep_columns=['a'])
@@ -323,7 +324,7 @@ class TestFilterColumns(unittest.TestCase):
          a.push(stream=buf, format="csv")
          self.assertEquals(buf.getvalue(), "b\n2\n4\n4\n")    
         
-class TestFilter(unittest.TestCase):
+class TestFilter(TestCase):
     def test_filter(self):
         a = Babe().pull(stream=StringIO('a,b\n1,2\n3,4\n1,4\n'), format="csv").typedetect()
         a = a.filter(function=lambda x : x.a == 3)
@@ -337,7 +338,7 @@ class TestFilter(unittest.TestCase):
     #    a.push(stream=buf, format='csv')
     #    self.assertEquals(buf.getvalue(), "a,b,sum\n1,2,\n1,4,\n,,6\n3,4,\n,,4\n")
 
-class TestMinMax(unittest.TestCase):
+class TestMinMax(TestCase):
     def test_max(self):
         a = Babe().pull(stream=StringIO('a,b\n1,2\n3,4\n1,4\n'), format="csv").typedetect()
         a = a.maxN(column='b', n=2)
@@ -352,7 +353,7 @@ class TestMinMax(unittest.TestCase):
         a.push(stream=buf, format='csv')
         self.assertEquals(buf.getvalue(), 'a,b\n1,2\n1,4\n')
         
-class TestRename(unittest.TestCase):
+class TestRename(TestCase):
     def test_rename(self):
         a = Babe().pull(stream=StringIO('a,b\n1,2\n3,4\n1,4\n'), format="csv").typedetect()
         a = a.rename(a="c")
@@ -360,7 +361,7 @@ class TestRename(unittest.TestCase):
         a.push(stream=buf, format='csv')
         self.assertEquals(buf.getvalue(), 'c,b\n1,2\n3,4\n1,4\n')
 
-class TestWindowMap(unittest.TestCase):
+class TestWindowMap(TestCase):
     def test_windowMap(self):
         a = Babe().pull(stream=StringIO('a\n1\n2\n3\n4\n5\n6\n7\n'), format="csv").typedetect()
         a = a.windowMap(3, lambda rows : rows[-1]._make([sum([row.a for row in rows])]))
@@ -368,8 +369,8 @@ class TestWindowMap(unittest.TestCase):
         a.push(stream=buf, format='csv')
         self.assertEquals(buf.getvalue(), '"a"\n1\n3\n6\n9\n12\n15\n18\n')
         
-class TestTwitter(unittest.TestCase):
-    @unittest.skipUnless(can_connect_to_the_net(), 'Requires net connection')
+class TestTwitter(TestCase):
+    @skipUnless(can_connect_to_the_net(), 'Requires net connection')
     def test_twitter(self):
         a = Babe().pull_twitter()
         a = a.filterColumns(keep_columns=
@@ -378,7 +379,7 @@ class TestTwitter(unittest.TestCase):
         buf = StringIO()
         a.push(stream=buf, format='csv')
     
-class TestMongo(unittest.TestCase):
+class TestMongo(TestCase):
     s1 = 'rown,f,s\n1,4.3,coucou\n2,4.2,salut\n'
     s2 = 'rown,f,s\n1,4.3,coucou2\n2,4.2,salut2\n'
     def test_push(self):
@@ -395,7 +396,7 @@ class TestMongo(unittest.TestCase):
         b.push(stream=buf, format='csv')
         self.assertEquals(buf.getvalue(), self.s2)      
 
-class TestDedup(unittest.TestCase):
+class TestDedup(TestCase):
     s = 'id,value,s\n1,coucou,4\n2,blabla,5\n3,coucou,6\n4,tutu,4\n'
     s2 = 'id,value,s\n1,coucou,4\n1,coucou,4\n3,coucou,6\n4,tutu,4\n'
     s3 = 'id,value,s\n1,coucou,4\n3,coucou,6\n4,tutu,4\n'
@@ -433,7 +434,7 @@ class TestDedup(unittest.TestCase):
 
 
 
-class TestPrimaryKey(unittest.TestCase):
+class TestPrimaryKey(TestCase):
     s = 'id,value,s\n1,coucou,4\n2,blabla,5\n3,coucou,6\n4,tutu,4\n'
 
     s2 = 'id,value,s\n1,coucou,4\n2,blabla,5\n3,coucou,6\n4,tutu,7\n'
@@ -468,9 +469,9 @@ class TestPrimaryKey(unittest.TestCase):
         buf = StringIO() 
         a.push(stream=buf, format='csv')
 
-class TestBuzzData(unittest.TestCase):
-    @unittest.skipUnless(can_connect_to_the_net(), 'Requires net connection')
-    @unittest.skipUnless(Babe.has_config('buzzdata', 'api_key'), 'Requires Buzzdata api Key')
+class TestBuzzData(TestCase):
+    @skipUnless(can_connect_to_the_net(), 'Requires net connection')
+    @skipUnless(Babe.has_config('buzzdata', 'api_key'), 'Requires Buzzdata api Key')
     def test_buzzdata(self):
         a = Babe().pull(protocol='buzzdata', 
                 dataset='best-city-contest-worldwide-cost-of-living-index',
@@ -480,7 +481,7 @@ class TestBuzzData(unittest.TestCase):
         a.push(stream=buf, format='csv')
 
 
-class TestSQL(unittest.TestCase):
+class TestSQL(TestCase):
     s = 'id,value,s\n1,coucou,4\n2,blabla,5\n3,coucou,6\n4,tutu,4\n'
 
     def test_pushsqlite(self):
@@ -501,7 +502,7 @@ class TestSQL(unittest.TestCase):
         b.push(stream=buf, format='csv', delimiter=',')
         self.assertEquals(buf.getvalue(), self.s)
 
-class TestMemoize(unittest.TestCase):
+class TestMemoize(TestCase):
     s = 'id,value,s\n1,coucou,4\n2,blabla,5\n3,coucou,6\n4,tutu,4\n'
     def test_memo(self):
         tmpfile = NamedTemporaryFile()
@@ -522,7 +523,7 @@ class TestMemoize(unittest.TestCase):
         buf3 = StringIO()
         self.assertRaises(IOError, lambda : c.push(stream=buf3, format="csv"))
 
-class TestPartition(unittest.TestCase):
+class TestPartition(TestCase):
     s = 'date,name,value\n2012-04-04,John,1\n2012-04-04,Luke,2\n2012-04-05,John,1\n'
 
     def test_partition(self):
