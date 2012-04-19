@@ -4,10 +4,9 @@ from cStringIO import StringIO
 
 def get_bucket(kwargs):
     from boto.s3.connection import S3Connection
-    if 'AWS_ACCESS_KEY_ID' in kwargs:
-        conn = S3Connection(kwargs['AWS_ACCESS_KEY_ID'], kwargs['AWS_SECRET_ACCESS_KEY'])
-    else: # Use environnement variables
-        conn = S3Connection()
+    key_id = BabeBase.get_config_with_env('s3', 'AWS_ACCESS_KEY_ID', kwargs)
+    access_key = BabeBase.get_config_with_env('s3', 'AWS_SECRET_ACCESS_KEY', kwargs)
+    conn = S3Connection(key_id, access_key)
     bucket = conn.get_bucket(kwargs['bucket'])
     return bucket 
     

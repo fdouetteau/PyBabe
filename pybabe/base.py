@@ -10,6 +10,7 @@ import ConfigParser
 import cPickle
 from string import Template
 from cStringIO import StringIO
+import sys
 
 def my_import(name):
     mod = __import__(name)
@@ -125,7 +126,16 @@ class BabeBase(object):
     def get_config(cls, section, key):
         config = cls.get_config_object()
         return config.get(section, key)
-            
+        
+    @classmethod    
+    def get_config_with_env(cls, section, key, kwargs): 
+        if key in kwargs: 
+            return kwargs[key]
+        if cls.has_config(section,key):
+            return cls.get_config(section, key)
+        if os.getenv(key):
+            return os.getenv(key)
+        raise Exception("Unable to locate key %s from section %s in args, config or env" % (key, section))
     @classmethod
     def has_config(cls, section, key):
         config = cls.get_config_object()
