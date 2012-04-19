@@ -48,10 +48,16 @@ class TestBasicFunction(unittest.TestCase):
 test_csv_content = """foo\tbar\tf\td\n1\t2\t3.2\t2010/10/02\n3\t4\t1.2\t2011/02/02\n"""
         
 class TestZip(unittest.TestCase):
+    s = "a,b\n1,2\n3,4\n"
     def test_zip(self):
         babe = Babe()
-        a = babe.pull(filename='tests/test.csv', name='Test')
-        a.push(filename='test.csv', compress='tests/test.zip')
+        a = babe.pull(stream=StringIO(self.s), format="csv")
+        a.push(filename='tests/test.zip')
+        b = Babe().pull(filename='tests/test.zip')
+        buf = StringIO()
+        b.push(stream=buf)
+        self.assertEquals(buf.getvalue(), self.s)
+
         
     def test_zipread(self):
         babe = Babe()
@@ -64,7 +70,7 @@ class TestGZ(unittest.TestCase):
     s = 'city,b,c\nPARIS,foo,bar\nLONDON,coucou,salut\n'
     def test_gz(self):
         a = Babe().pull(stream=StringIO(self.s), format='csv', name='Test')
-        a.push(filename='test.csv', compress='test.csv.gz')
+        a.push(filename='test.csv.gz')
         b = Babe().pull(filename='test.csv.gz')
         buf = StringIO()
         b.push(stream=buf, format='csv')
@@ -526,6 +532,11 @@ class TestPartition(unittest.TestCase):
         a.push(stream_dict=d, format="csv")
         self.assertEquals(d['2012-04-04'].getvalue(), 'date,name,value\n2012-04-04,John,1\n2012-04-04,Luke,2\n')
         self.assertEquals(d['2012-04-05'].getvalue(), 'date,name,value\n2012-04-05,John,1\n')
+
+    def test_partition_s3(self):
+        a = Babe().pull(stream=StringIO(self.s), format='csv')
+        a = a.partition(column = 'date')
+        a.push(protocol="s3", bucket="florian-test", format="csv", filename_template='foobar/$name.csv.gz')
 
 import code, traceback, signal
 

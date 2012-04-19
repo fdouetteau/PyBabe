@@ -328,40 +328,44 @@ def pull(null_stream, **kwargs):
         
         
 BabeBase.register('pull', pull)
+
+def split_ext(filename):
+    fileBaseName, fileExtension = os.path.splitext(filename) 
+    fileExtension = fileExtension.lower()
+    if len(fileExtension) > 0:
+        fileExtension = fileExtension[1:]
+    return (fileBaseName, fileExtension)
+
         
 def push(instream, filename=None, filename_template = None, directory = None, stream = None, format=None, encoding=None, protocol=None, compress=None, stream_dict=None, **kwargs):
     outstream = None
     compress_format = None
     fileExtension = None
+    fileBaseName = None
     to_close = []
 
 
+    ## Guess format from file extensions .. 
+    filename_for_guess = filename if filename else filename_template
 
-    if filename: 
-        fileBaseName, fileExtension = os.path.splitext(filename) 
-        fileExtension = fileExtension.lower()
-        if len(fileExtension) > 0:
-            fileExtension = fileExtension[1:]
-    
-    if not format and fileExtension:
-        if fileExtension in BabeBase.pushExtensions:
-            format = BabeBase.pushExtensions[fileExtension] 
-        else: 
-            raise Exception("Unable to guess format") 
+    if filename_for_guess: 
+        fileBaseName, fileExtension = split_ext(filename_for_guess) 
+
+    if fileExtension in BabeBase.pushCompressExtensions:
+        if not compress_format:
+            compress_format = BabeBase.pushCompressExtensions[fileExtension]
+        fileBaseName, fileExtension = split_ext(fileBaseName)
+
+    if not format and fileExtension in BabeBase.pushExtensions:
+        format = BabeBase.pushExtensions[fileExtension] 
             
     if not format: 
-        raise Exception("Unable to guess format")
+        format = "csv"
     
     if not format in BabeBase.pushFormats: 
         raise Exception('Unsupported format %s' % format) 
-                
-    if compress: 
-        compress_baseName, compress_fileExtension = os.path.splitext(compress) 
-        compress_fileExtension = compress_fileExtension.lower()[1:]
-        if compress_fileExtension in BabeBase.pushCompressExtensions: 
-            compress_format = BabeBase.pushCompressExtensions[compress_fileExtension] 
-        else:
-            raise Exception('Unknown exception format %s' % compress_format)
+    if compress_format and not compress_format in BabeBase.pushCompressFormats:
+        raise Exception('Unsupported compression format %s' % compress_format)
                 
     if protocol and not (protocol in BabeBase.pushProtocols):
         raise Exception('Unsupported protocol %s' % protocol)
@@ -375,20 +379,23 @@ def push(instream, filename=None, filename_template = None, directory = None, st
 
     it = iter(instream)
     while True:
+        this_filename = None
         try: 
             header = it.next()
         except StopIteration: 
             break 
 
         if not filename and header.name and filename_template:
-            filename = Template(filename_template).substitute(name=header.name)
+            this_filename = Template(filename_template).substitute(name=header.name)
 
         if directory and filename:
-            filename = os.path.join(directory, filename)
+            this_filename = os.path.join(directory, this_filename if this_filename else filename)
 
+        if this_filename == None:
+            this_filename = filename 
 
         # If external protocol or compression, write to a temporary file. 
-        if protocol or compress:
+        if protocol or compress_format:
             outstream = tempfile.NamedTemporaryFile()
             to_close.append(outstream)
         elif stream_dict != None: 
@@ -399,25 +406,28 @@ def push(instream, filename=None, filename_template = None, directory = None, st
         elif stream: 
             outstream = stream
         else: 
-            outstream = open(filename, 'wb')
+            outstream = open(this_filename, 'wb')
             to_close.append(outstream)
             
         # Actually write the file. 
-        BabeBase.pushFormats[format](fileExtension, header, it, outstream, encoding, **kwargs)
+        BabeBase.pushFormats[format](format, header, it, outstream, encoding, **kwargs)
         outstream.flush()
         
         if compress_format:
             # Apply file compression. If output protocol, use a temporary file name 
             if protocol:
-                compress_file = tempfile.NamedTemporaryFile()
+                n = tempfile.NamedTemporaryFile()
+                compress_file = n.name
             else:
-                compress_file = compress
-            BabeBase.pushCompressFormats[compress_format](compress_file, outstream.name, filename)
-            outstream = compress_file
+                compress_file = this_filename
+            name_in_archive = os.path.splitext(os.path.basename(this_filename))[0] + '.' + format
+            BabeBase.pushCompressFormats[compress_format](compress_file, outstream.name, name_in_archive)
+            if protocol:
+                outstream = n 
                 
         # Apply protocol 
         if protocol:
-            BabeBase.pushProtocols[protocol][1](outstream.name, filename, **kwargs)
+            BabeBase.pushProtocols[protocol][1](outstream.name, this_filename, **kwargs)
         
         for s in to_close:
             s.close()
