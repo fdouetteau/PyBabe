@@ -93,6 +93,8 @@ def pull_sql(false_stream, query=None, table=None, host=None, database_kind=None
     for row in reader:
         yield metainfo.t._make([unicode(x, 'utf-8') for x in row])
     p.wait()
+    if p.returncode != 0: 
+        raise Exception("SQL process failed with errcode %u" % p.returncode)
 
     
 
