@@ -539,6 +539,14 @@ class TestPartition(TestCase):
         a = a.partition(field = 'date')
         a.push(protocol="s3", bucket="florian-test", format="csv", filename_template='foobar/$partition.csv.gz')
 
+class TestKontagent(TestCase):
+    def test_load(self):
+        start_time = '2012-04-23 11:00'
+        end_time = '2012-04-23 12:00'
+        a = Babe().pull_kontagent(start_time, end_time, sample_mode=True)
+        buf = StringIO()
+        a.push(stream=buf, format='csv')
+
 import code, traceback, signal
 
 def debug(sig, frame):
