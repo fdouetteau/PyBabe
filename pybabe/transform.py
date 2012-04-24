@@ -1,7 +1,7 @@
 
 from base import BabeBase, StreamHeader, StreamFooter, StreamMeta
       
-def mapTo(stream, function, insert_columns = None, columns = None, name = None):
+def mapTo(stream, function, insert_fields = None, fields = None, typename = None):
     """
     Apply a function to a stream. The function receives as input a named tuple. 
     
@@ -13,11 +13,11 @@ def mapTo(stream, function, insert_columns = None, columns = None, name = None):
     if neither, a named tuple is expected as a result. namedtuple._make and namedtuple._replace can be used 
     to build the new object.  
     """
-    if insert_columns:
+    if insert_fields:
         metainfo = None
         for row in stream:
             if isinstance(row, StreamHeader):
-                metainfo = row.insert(name=name, names=insert_columns)
+                metainfo = row.insert(typename=typename, fields=insert_fields)
                 yield metainfo
             elif isinstance(row, StreamMeta):
                 yield row 
@@ -27,21 +27,21 @@ def mapTo(stream, function, insert_columns = None, columns = None, name = None):
                     yield metainfo.t._make(list(row) + res)
                 else:
                     yield metainfo.t._make(list(row) + [res])
-    elif columns:
+    elif fields:
         metainfo = None
         for row in stream:
             if isinstance(row, StreamHeader):
-                metainfo = row.replace(name=name, names=columns)
+                metainfo = row.replace(typename=typename, fields=fields)
                 yield metainfo
             elif isinstance(row, StreamMeta):
                 yield row
             else:
                 yield metainfo.t._make(function(row))
-    elif name:
+    elif typename:
         metainfo = None
         for row in stream:
             if isinstance(row, StreamHeader):
-                metainfo = row.augment(name=name, names=[])
+                metainfo = row.augment(typename=typename, fields=[])
                 yield metainfo
             elif isinstance(row, StreamMeta):
                 yield row 
@@ -116,15 +116,15 @@ def head(stream, n):
         yield row
 BabeBase.register('head', head)
 
-def split(stream, column, separator):
+def split(stream, field, separator):
     for row in stream:
         if isinstance(row, StreamMeta):
             yield row
         else:
-            value = getattr(row, column)
+            value = getattr(row, field)
             values = value.split(separator)
             for v in values:
-                yield row._replace(**{column:v})
+                yield row._replace(**{field:v})
 BabeBase.register('split',split)
 
 def replace(stream, oldvalue, newvalue, column = None):
@@ -148,19 +148,19 @@ def replace(stream, oldvalue, newvalue, column = None):
                 
 BabeBase.register('replace', replace)
 
-def filterColumns(stream, name=None, remove_columns=None, keep_columns=None):
+def filterColumns(stream, typename=None, remove_fields=None, keep_fields=None):
     for row in stream:
         if isinstance(row, StreamHeader):
-            if keep_columns:
-                names = keep_columns
+            if keep_fields:
+                fields= keep_fields
             else:
-                names = [name for name in row.names if not name in remove_columns] 
-            metainfo = row.replace(name=name, names=names)
+                fields = [name for name in row.fields if not name in remove_fields] 
+            metainfo = row.replace(typename=typename, fields=fields)
             yield metainfo
         elif isinstance(row, StreamMeta):
             yield row
         else:
-            yield metainfo.t._make([getattr(row, k) for k in names])
+            yield metainfo.t._make([getattr(row, k) for k in fields])
 
 BabeBase.register('filterColumns', filterColumns)
 
@@ -177,7 +177,7 @@ BabeBase.register('filter', filter)
 def rename(stream, **kwargs):
     for row in stream:
         if isinstance(row, StreamHeader):
-            metainfo = row.replace(name=None, names=[kwargs.get(name, name) for name in row.names])
+            metainfo = row.replace(typename=None, fields=[kwargs.get(name, name) for name in row.fields])
             yield metainfo
         elif isinstance(row, StreamMeta):
             yield row 
@@ -195,17 +195,17 @@ class Window(object):
             self.buf.pop(0)
         self.buf.append(obj)
         
-def windowMap(stream, window_size, function, insert_columns = None, columns = None, name = None):
+def windowMap(stream, window_size, function, insert_fields = None, fields = None, typename = None):
     """
 Similar to mapTo. 
 For each row, function(rows) is called with the last 'window_size' rows
     """
     window = Window(window_size)
-    if insert_columns:
+    if insert_fields:
           metainfo = None
           for row in stream:
                 if isinstance(row, StreamHeader):
-                    metainfo = row.insert(name=name, names=insert_columns)
+                    metainfo = row.insert(typename=typename, fields=insert_fields)
                     yield metainfo
                 elif isinstance(row, StreamMeta):
                     yield row 
@@ -216,22 +216,22 @@ For each row, function(rows) is called with the last 'window_size' rows
                         yield metainfo.t._make(list(row) + res)
                     else:
                         yield metainfo.t._make(list(row) + [res])
-    elif columns:
+    elif fields:
           metainfo = None
           for row in stream:
                 if isinstance(row, StreamHeader):
-                    metainfo = row.replace(name=name, names=columns)
+                    metainfo = row.replace(typename=typename, fields=fields)
                     yield metainfo
                 elif isinstance(row, StreamMeta):
                     yield row
                 else:
                     window.add(row)
                     yield metainfo.t._make(function(window.buf))
-    elif name:
+    elif typename:
           metainfo = None
           for row in stream:
                 if isinstance(row, StreamHeader):
-                    metainfo = row.augment(name=name, names=[])
+                    metainfo = row.augment(typename=typename, fields=[])
                     yield metainfo
                 elif isinstance(row, StreamMeta):
                     yield row
@@ -248,30 +248,40 @@ For each row, function(rows) is called with the last 'window_size' rows
 
 BabeBase.register('windowMap', windowMap)
 
-def transpose(stream):
+def transpose(stream, typename=None):
     """
     Transpose a stream. 
     For each row, the 'unique identifier' for this row will be used as a column name. 
-    id, b, c
+    city, b, c
     PARIS, foo, bas
     LONDON, coucou, salut
 
-    column, PARIS,LONDON
+    field, PARIS,LONDON
+    city, PARIS, LONDON
     b, foo, coucou
     c, bas, salut
+
+    b,c
+    foo,bar
+    coucou,salut
+
+    field, 1, 2 
+    b,foo, coucou
+    c,bar,salut
+
     """
     for row in stream:
         if isinstance(row, StreamHeader):
             metainfo = row
             linecount = 0 
-            t_names = ["_".join(metainfo.primary_keys) if metainfo.primary_keys else 'linecount']
-            t_primary_keys = t_names[0]
-            t_rows = [[name] for name in metainfo.names]
+            t_names = ['field']
+            t_primary_key = 'field'
+            t_rows = [[name] for name in metainfo.fields]
         elif isinstance(row, StreamFooter):
-            t_metainfo= StreamHeader(name = metainfo.name, names=t_names, primary_keys=t_primary_keys)
+            t_metainfo= StreamHeader(source=metainfo.source, typename=typename, fields=t_names, primary_key=t_primary_key)
             yield t_metainfo
             for t_row in t_rows: 
-                if t_row[0] in metainfo.primary_keys:
+                if t_row[0] == metainfo.primary_key: # Skip primary key 
                     continue
                 yield t_metainfo.t(*t_row) 
             yield row 

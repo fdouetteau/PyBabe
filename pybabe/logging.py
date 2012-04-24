@@ -2,6 +2,15 @@
 from base import StreamHeader, BabeBase, StreamMeta
 import csv
 
+
+class log_dialect(csv.Dialect):
+    lineterminator = '\n'
+    delimiter = ','
+    doublequote = False
+    escapechar = '\\'
+    quoting = csv.QUOTE_MINIMAL
+    quotechar = '"'
+
 def log(stream, logfile):
     if isinstance(logfile, basestring):
         logstream = open(logfile, 'wb')
@@ -11,8 +20,8 @@ def log(stream, logfile):
         do_close = False
     for row in stream:
         if isinstance(row, StreamHeader):
-            writer = csv.writer(logstream, row.dialect)
-            writer.writerow(row.names)
+            writer = csv.writer(logstream, log_dialect)
+            writer.writerow(row.fields)
         elif isinstance(row, StreamMeta):
             pass
         else:

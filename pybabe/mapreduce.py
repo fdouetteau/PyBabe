@@ -82,7 +82,7 @@ def build_reducer(reducer):
         return Reducer(reducer)
     
     
-def groupBy(stream, key, reducer, assume_sorted=False, name = None, columns=None):
+def groupBy(stream, key, reducer, assume_sorted=False, typename = None, fields=None):
     """
 GroupBy all values for a key. 
 If reducer is a function, function(t, key, row_group) is called with an array of all rows matching the key value
@@ -99,8 +99,8 @@ Otherwise can be a 'Reducer' object.
     pk = None
     for elt in stream:
         if isinstance(elt, StreamHeader):
-            if columns or name:
-                metainfo = elt.replace(name=name, names=columns)
+            if fields or typename:
+                metainfo = elt.replace(typename=typename,fields=fields)
             else:
                 metainfo = elt
             yield metainfo
@@ -132,7 +132,7 @@ Otherwise can be a 'Reducer' object.
             
 BabeBase.register('groupBy', groupBy)
     
-def groupAll(stream, reducer, name = None, columns = None):
+def groupAll(stream, reducer, typename = None, fields = None):
     """
     Group all keys
 reducer can either be a function or a reducer object
@@ -143,8 +143,8 @@ if an object, reducer.begin_group(), reducer.row() and reducer.end_group() will 
     reducer.begin_group(None)
     for elt in stream:
         if isinstance(elt, StreamHeader):
-            if name or columns:
-                metainfo = elt.replace(name, columns)
+            if typename or fields:
+                metainfo = elt.replace(typename=typename, fields=fields)
             else:
                 metainfo = elt
             yield metainfo

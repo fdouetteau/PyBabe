@@ -23,47 +23,37 @@ class StreamMeta(object):
     pass
 
 class StreamHeader(StreamMeta):
-    def __init__(self, name, names, primary_keys = None, t = None,  dialect=None):
-        self.dialect = dialect
-        self.names = names
-        self.name = name
-        self.primary_keys = primary_keys
-        if isinstance(primary_keys, basestring): 
-            self.primary_keys = [primary_keys]
-        if not self.name:
-            self.name = '__'.join(map(StreamHeader.keynormalize, self.names))
-        self.t = t if t else namedtuple(self.name, map(StreamHeader.keynormalize, self.names))
+    source = None
+    typename = None
+    fields = None
+    partition = None
+    primary_key = None
+    t = None
+
+    def __init__(self, fields, source=None, typename=None,  partition = None, primary_key = None, t = None, **kwargs):
+        self.source = source
+        self.typename = typename
+        self.fields = fields
+        self.partition = partition
+        self.primary_key = primary_key
+        if not self.typename: 
+            self.typename = source
+        if not self.typename:
+            self.typename = '_'.join(map(StreamHeader.keynormalize, self.fields))
+        self.t = t if t else namedtuple(self.typename, map(StreamHeader.keynormalize, self.fields))
 
     ## Some state to be define for metainfo pickling. 
 
-
-
     def as_dict(self):
-        if self.dialect: 
-            d = { 
-                'dialect' : self.dialect.__dict__, 
-            }
-        else: 
-            d = {}
+        d = {}
         d.update(self.__dict__)
         del d['t']
-        del d['dialect']
         return d
 
     @staticmethod
     def from_dict(d):
-        name = d.get('name', None)
-        names = d.get('names', None)
-        primary_keys = d.get('primary_keys', None)
-        if 'dialect' in d: 
-            class dialect(Dialect):
-                pass
-            for k, v in d['dialect'].iteritems():
-                setattr(dialect, k, v)
-            dialect_ = dialect
-        else: 
-            dialect_ = None
-        return StreamHeader(name=name, names=names, primary_keys=primary_keys, dialect=dialect_)
+        return StreamHeader(**d)
+
 
 
     @classmethod
@@ -76,24 +66,31 @@ class StreamHeader(StreamMeta):
             s = 'd_' + s
         return s
 
-    def insert(self, name, names):
-        return StreamHeader(name=name if name else self.name,
-            names=self.names + names,
-            dialect=self.dialect)
+    def insert(self, typename, fields):
+        return StreamHeader(
+            typename=typename if typename else self.typename, 
+            source = self.source, 
+            partition=  self.partition,
+            fields = self.fields + fields)
 
-    def replace(self, name=None, names=None):
-        return StreamHeader(name=name if name else self.name,
-        names=names if names else self.names, t = self.t if not names else None, 
-         dialect=self.dialect)
+    def replace(self, typename = None, fields = None, partition=partition):
+        return StreamHeader(typename=typename if typename else self.typename,
+            fields=fields if fields else self.fields, 
+            t = self.t if not fields or typename else None, 
+            partition=partition if partition else self.partition,
+            source = self.source)
+
+    def get_stream_name(self): 
+        return '_'.join(filter(None, [self.source, self.partition]))
 
     def get_primary_identifier(self, row, linecount):
         """Retrieve a primary identifier associated with a row
         If primary key are defined, those are used
         """
-        if self.primary_keys:
-            return '-'.join([str(getattr(row, k)) for k in self.primary_keys])
+        if self.primary_key:
+            return getattr(row, self.primary_key)
         else:
-            return self.name + '_' + str(linecount)
+            return str(linecount)# TODO : add paritition? 
 
 class StreamFooter(StreamMeta): 
     pass 
@@ -128,13 +125,15 @@ class BabeBase(object):
         return config.get(section, key)
         
     @classmethod    
-    def get_config_with_env(cls, section, key, kwargs): 
+    def get_config_with_env(cls, section, key, kwargs, default=None): 
         if key in kwargs: 
             return kwargs[key]
         if cls.has_config(section,key):
             return cls.get_config(section, key)
         if os.getenv(key):
             return os.getenv(key)
+        if default is not None: 
+            return default
         raise Exception("Unable to locate key %s from section %s in args, config or env" % (key, section))
     @classmethod
     def has_config(cls, section, key):
@@ -229,7 +228,7 @@ def pull(null_stream, **kwargs):
             os.mkdir(memoize_directory)
 
         s = cPickle.dumps(kwargs)
-        hashvalue = hash(s)
+        hashvalue = hash('3' + s)
         mempath = os.path.join(memoize_directory, str(hashvalue))
         if os.path.exists(mempath):
             f = open(mempath)
@@ -257,8 +256,6 @@ def pull(null_stream, **kwargs):
     command = kwargs.get('command', None)
     compress_format = kwargs.get('compress_format', None)
     command_input = kwargs.get('command_input', None)
-    name = kwargs.get('name', None)
-    names = kwargs.get('names', None)
     format = kwargs.get('format', None)
 
     (compress_format, format)  =  guess_format(compress_format, format, filename)
@@ -305,7 +302,7 @@ def pull(null_stream, **kwargs):
         
 
     ## Parse high level 
-    i = BabeBase.pullFormats[format](format=fileExtension, stream=instream, name=name, names=names, kwargs=kwargs)
+    i = BabeBase.pullFormats[format](format=fileExtension, stream=instream, kwargs=kwargs)
 
     if kwargs.get('memoize', False):
         f = open(mempath, "w")
@@ -383,7 +380,6 @@ def push(instream, filename=None, filename_template = None, directory = None, st
     if protocol and kwargs.get('protocol_early_check', True):
         early_check = BabeBase.pushProtocols[protocol][0]
         if early_check:
-            print "Early check"
             early_check(**kwargs)
 
 
@@ -395,8 +391,8 @@ def push(instream, filename=None, filename_template = None, directory = None, st
         except StopIteration: 
             break 
 
-        if not filename and header.name and filename_template:
-            this_filename = Template(filename_template).substitute(name=header.name)
+        if not filename and filename_template:
+            this_filename = Template(filename_template).substitute(header.__dict__)
 
         if directory and filename:
             this_filename = os.path.join(directory, this_filename if this_filename else filename)
@@ -409,7 +405,7 @@ def push(instream, filename=None, filename_template = None, directory = None, st
             outstream = tempfile.NamedTemporaryFile()
             to_close.append(outstream)
         elif stream_dict != None: 
-            n = filename if filename else header.name
+            n = filename if filename else header.get_stream_name()
             if not n  in stream_dict:
                 stream_dict[n] = StringIO()
             outstream = stream_dict[n]

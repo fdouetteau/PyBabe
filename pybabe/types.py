@@ -48,8 +48,8 @@ def primary_key_detect(stream, max=None):
         d.append(row)
         if isinstance(row,StreamHeader): 
             metainfo = row
-            values = [set() for k in metainfo.names]
-            keys = set(xrange(0,len(metainfo.names)))
+            values = [set() for k in metainfo.fields]
+            keys = set(xrange(0,len(metainfo.fields)))
         elif isinstance(row, StreamMeta):
             pass
         else:
@@ -64,12 +64,12 @@ def primary_key_detect(stream, max=None):
             if len(keys) <= 1:
                 break
     if len(keys) == 1:
-        metainfo.primary_keys = [metainfo.names[list(keys)[0]]]
+        metainfo.primary_key = metainfo.fields[list(keys)[0]]
         #print "Detected primary key %s" % str(metainfo.primary_keys)
     elif len(keys) == 0:
         pass # print 'no primary key'
     else:
-        metainfo.primary_keys = [metainfo.names[min(keys)]]
+        metainfo.primary_key = metainfo.fields[min(keys)]
         #  print "Assumed primary key %s" % str(metainfo.primary_keys)
     for row in d:
         yield row

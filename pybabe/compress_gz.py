@@ -10,7 +10,7 @@ def compress(compress_outstream, inputfile_filename, inarchive_filename):
 
 def get_content_list(compress_instream, filename):
 	p = Popen(['gzip', '-d', '-c'], stdin=compress_instream, stdout=PIPE)
-	f = os.path.splitext(os.path.basename(filename))[0]
+	f = os.path.splitext(os.path.basename(filename))[0] if filename else None
 	return (p, [f])
      
 def uncompress(handle, name):

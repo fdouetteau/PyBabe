@@ -87,8 +87,8 @@ def pull_sql(false_stream, query=None, table=None, host=None, database_kind=None
     p.stdin.close()
     dialect = sql_dialect()
     reader = csv.reader(p.stdout, dialect=dialect)        
-    names = reader.next()
-    metainfo = StreamHeader(name=table, dialect=dialect, names=names)
+    fields = reader.next()
+    metainfo = StreamHeader(**dict(kwargs, typename=table, fields=fields))
     yield metainfo
     for row in reader:
         yield metainfo.t._make([unicode(x, 'utf-8') for x in row])
@@ -140,7 +140,7 @@ def push_sql(stream, database_kind, table=None, host=None, create_table = False,
                 if p.returncode:
                     break
             if create_table:
-                fields = ','.join([name + ' varchar(255)' for name in metainfo.names])
+                fields = ','.join([name + ' varchar(255)' for name in metainfo.fields])
                 create_table_query = db_params['create_table'] % (table, fields)
                 #print create_table_query
                 p.stdin.write(create_table_query)

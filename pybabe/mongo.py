@@ -3,7 +3,7 @@
 from base import BabeBase, StreamHeader, StreamFooter
 from pymongo import Connection 
 
-def push_mongo(instream, db, collection, **kwargs):
+def push_mongo(instream, db, collection, drop_collection=False, **kwargs):
 	"""
 	Push each row as an object in a mongodb collection
 	StreamHeader.get_primary_identifier is used to retrieve a unique identifier for the row. 
@@ -11,6 +11,8 @@ def push_mongo(instream, db, collection, **kwargs):
 	connection = Connection(**kwargs)
 	db_ = connection[db]
 	coll = db_[collection]
+	if drop_collection:
+		coll.remove()
 	for row in instream:
 		if isinstance(row, StreamHeader):
 			metainfo = row
@@ -20,25 +22,34 @@ def push_mongo(instream, db, collection, **kwargs):
 		else:
 			d = row._asdict()
 			count = count+1
-			d["_id"] = metainfo.get_primary_identifier(row, count)
+			# Automatically create document URI if necessary. 
+			if not "_id" in d: 
+				d["_id"] = metainfo.get_primary_identifier(row, count)
 			coll.insert(d)
 
-def pull_mongo(false_stream, db, collection, spec=None, name=None, names=None, primary_keys = ["id"], **kwargs): 
+def pull_mongo(false_stream, db, collection, spec=None, **kwargs): 
 	"""
 	Pull objects from mongo as rows
 	"""
-	connection = Connection(**kwargs)
+	k = kwargs.copy()
+	if 'fields' in k: 
+		del k['fields']
+	if 'typename'in k : 
+		del k['typename']
+	connection = Connection(**k)
 	db_ = connection[db]
 	coll  = db_[collection]
 	metainfo = None
-	for doc in coll.find(spec, **kwargs):
+	for doc in coll.find(spec, **k):
 		if not metainfo: 
-			names = names if names else [StreamHeader.keynormalize(n) for n in doc]
-			metainfo = StreamHeader(name=name if name else collection, primary_keys=primary_keys, names=names)
+			fields = kwargs.get('fields', None)
+			if not fields: 
+				fields = [StreamHeader.keynormalize(n) for n in doc]
+				fields.sort() # Mandatory for determisn. 
+			typename = kwargs.get('typename', collection)
+			metainfo = StreamHeader(**dict(kwargs, typename=typename, fields=fields))
 			yield metainfo
-		if not 'id' in doc: 
-			doc['id'] = doc['_id']
-		yield metainfo.t(*[doc[k] for k in names])
+		yield metainfo.t(*[doc[field] for field in fields])
 	if metainfo: 	
 		yield StreamFooter()
 

@@ -4,33 +4,29 @@ import csv
 from charset import UTF8Recoder, UTF8RecoderWithCleanup, PrefixReader, UnicodeCSVWriter
 import codecs
 
-def linepull(stream, name, names, dialect, kwargs):
+def linepull(stream, dialect, kwargs):
     it = iter(stream)
-    if names:
-        metainfo = StreamHeader(name=name, names=names, dialect=dialect)
-        yield metainfo
-    else:
-        row = it.next()
-        row = row.rstrip('\r\n')
-        metainfo = StreamHeader(name=name, names=[row], dialect=dialect)
-        yield metainfo
+    fields = kwargs.get('fields', None)
+    if not fields: 
+        fields = [it.next().rstrip('\r\n')] 
+    metainfo = StreamHeader(**dict(kwargs, fields=fields))
+    yield metainfo
     for row in it:
         yield metainfo.t._make([row.rstrip('\r\n')])
     yield StreamFooter()
             
-def csvpull(stream, name, names, dialect, kwargs):
+def csvpull(stream,  dialect, kwargs):
     reader = csv.reader(stream, dialect)        
-    if not names:
-        names = reader.next()
-    metainfo = StreamHeader(name=name, dialect=dialect, names=names, primary_keys=kwargs.get('primary_key', kwargs.get('primary_keys', None)))
+    fields = kwargs.get('fields', None)
+    if not fields:
+        fields = reader.next()
+    metainfo = StreamHeader(**dict(kwargs, fields=fields))
     yield metainfo
     for row in reader:
-        if name == 'ls': 
-            print row
         yield metainfo.t._make([unicode(x, 'utf-8') for x in row])
     yield StreamFooter()
 
-def pull(format, stream, name, names, kwargs):                        
+def pull(format, stream,kwargs):                        
     if kwargs.get('utf8_cleanup', False): 
         stream = UTF8RecoderWithCleanup(stream, kwargs.get('encoding', 'utf-8'))
     elif codecs.getreader(kwargs.get('encoding', 'utf-8'))  != codecs.getreader('utf-8'):
@@ -47,10 +43,10 @@ def pull(format, stream, name, names, kwargs):
         dialect.lineterminator = '\n'
     if dialect.delimiter.isalpha():
         # http://bugs.python.org/issue2078
-        for row in  linepull(stream, name, names, dialect, kwargs):
+        for row in  linepull(stream,  dialect, kwargs):
             yield row 
         return 
-    for row in csvpull(stream, name, names, dialect, kwargs):
+    for row in csvpull(stream,  dialect, kwargs):
         yield row 
         
 
@@ -65,11 +61,11 @@ class default_dialect(csv.Dialect):
 def push(format, metainfo, instream, outfile, encoding, delimiter=None, **kwargs):
     if not encoding:
         encoding = "utf8"
-    dialect = metainfo.dialect if metainfo.dialect else default_dialect
+    dialect = kwargs.get('dialect', default_dialect) 
     if delimiter:
         dialect.delimiter = delimiter
     writer = UnicodeCSVWriter(outfile, dialect=dialect, encoding=encoding)
-    writer.writerow(metainfo.names)
+    writer.writerow(metainfo.fields)
     for k in instream: 
         if isinstance(k, StreamFooter):
             break

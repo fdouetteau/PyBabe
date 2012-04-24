@@ -2,13 +2,12 @@
 import codecs
 from base import StreamHeader, BabeBase, StreamFooter
 
-def pull(format, stream, name, names, kwargs):    
+def pull(format, stream, kwargs):    
     stream = codecs.getreader(kwargs.get('encoding', 'utf8'))(stream)
 
-    if not names:
-        names=['text']
+    fields = kwargs.get('fields', ['text'])
     
-    metainfo = StreamHeader(name=name, names=names)
+    metainfo = StreamHeader(**dict(kwargs, fields=fields))
     yield metainfo 
     
     for line in stream:
