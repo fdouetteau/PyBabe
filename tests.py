@@ -12,7 +12,7 @@ import BaseHTTPServer, urllib2
 from tempfile import NamedTemporaryFile
 import os
 import socket 
-from unittest2 import TestCase, skipUnless
+from unittest2 import TestCase, skipUnless, main
 
 def can_connect_to_the_net(): 
     try:
@@ -20,6 +20,17 @@ def can_connect_to_the_net():
         return True
     except Exception: 
         return False
+
+def can_execute(s):
+    try:
+        from subprocess import Popen, PIPE
+        p = Popen([s], stdin=PIPE, stdout=PIPE, stderr=PIPE) 
+        p.stdin.close()
+        p.wait()
+        return True
+    except OSError:
+        return False
+
 
 class TestBasicFunction(TestCase):
         
@@ -484,6 +495,7 @@ class TestBuzzData(TestCase):
 class TestSQL(TestCase):
     s = 'id,value,s\n1,coucou,4\n2,blabla,5\n3,coucou,6\n4,tutu,4\n'
 
+    @skipUnless(can_execute('sqlite3'),  "Requires sqlite3 installed")
     def test_pushsqlite(self):
         a = Babe().pull(stream=StringIO(self.s), format='csv')
         a = a.typedetect()
@@ -493,6 +505,7 @@ class TestSQL(TestCase):
         b.push(stream=buf, format='csv', delimiter=',')
         self.assertEquals(buf.getvalue(), self.s)
 
+    @skipUnless(can_execute('mysql'),  "Requires mysql client")
     def test_mysql(self):
         a = Babe().pull(stream=StringIO(self.s), format='csv')
         a = a.typedetect()
@@ -501,6 +514,18 @@ class TestSQL(TestCase):
         buf = StringIO()
         b.push(stream=buf, format='csv', delimiter=',')
         self.assertEquals(buf.getvalue(), self.s)
+
+    # createdb pybabe_test # required before 
+    @skipUnless(can_execute('vwload'),  "Requires Vectorwise client")
+    def test_vectorwise(self):
+        a = Babe().pull(stream=StringIO(self.s), format='csv')
+        a = a.typedetect()
+        a.push_sql(table='test_table', database_kind='vectorwise', database='pybabe_test', drop_table = True, create_table=True)
+        b = Babe().pull_sql(database_kind='vectorwise', database='pybabe_test', table='test_table')
+        buf = StringIO()
+        b.push(stream=buf, format='csv', delimiter=',')
+        self.assertEquals(buf.getvalue(), self.s)
+
 
 class TestMemoize(TestCase):
     s = 'id,value,s\n1,coucou,4\n2,blabla,5\n3,coucou,6\n4,tutu,4\n'
@@ -578,4 +603,4 @@ def listen():
 listen()
 
 if __name__ == "__main__":
-    unittest.main()
+    main()
