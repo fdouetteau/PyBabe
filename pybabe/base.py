@@ -19,6 +19,8 @@ def my_import(name):
         mod = getattr(mod, comp)
     return mod
 
+
+
 class StreamMeta(object): 
     pass
 
@@ -125,7 +127,7 @@ class BabeBase(object):
         return config.get(section, key)
         
     @classmethod    
-    def get_config_with_env(cls, section, key, kwargs, default=None): 
+    def get_config_with_env(cls, section, key, kwargs={}, default=None): 
         if key in kwargs: 
             return kwargs[key]
         if cls.has_config(section,key):
@@ -140,9 +142,75 @@ class BabeBase(object):
         config = cls.get_config_object()
         return config.has_option(section, key)
 
+    def should_memoize(self):
+        return self.d.get('memoize', False)
+
+    def has_memoized(self):
+        self.memoize_directory = self.d.get('memoize_directory', None)
+        if not self.memoize_directory: 
+            ## TODO: not portable 
+            self.memoize_directory = "/tmp/pybabe-memoize-%s" % os.getenv('USER')
+        if not os.path.exists(self.memoize_directory): 
+            os.mkdir(self.memoize_directory)
+
+        s = cPickle.dumps((self.v, self.d))
+        hashvalue = hash((self.m.__doc__ if self.m.__doc__ else "") + s)
+        self.mempath = os.path.join(self.memoize_directory, str(hashvalue))
+        if os.path.exists(self.mempath):
+            return True
+        else:
+            return False
+
+    def iter_memoized(self):
+        f = open(self.mempath)
+        try:
+            metainfo = None
+            while True:
+                a = cPickle.load(f)
+                if isinstance(a, list):
+                    for v in a: 
+                        yield metainfo.t._make(v)
+                elif isinstance(a, StreamFooter):
+                    yield a 
+                else:
+                    metainfo = StreamHeader.from_dict(a)
+                    yield metainfo
+        except EOFError:
+            f.close()
+            return  
+
+    def mem_iter(self, i):
+        tmppath = self.mempath + '.tmp'
+        f = open(tmppath, "w")
+        buf = []
+        for r in i:
+            if isinstance(r, StreamHeader):
+                cPickle.dump(map(list, buf), f, cPickle.HIGHEST_PROTOCOL)
+                del buf[:]
+                cPickle.dump(r.as_dict(), f, cPickle.HIGHEST_PROTOCOL)
+            elif isinstance(r, StreamFooter):
+                cPickle.dump(map(list, buf), f, cPickle.HIGHEST_PROTOCOL)
+                del buf[:]
+                cPickle.dump(r, f, cPickle.HIGHEST_PROTOCOL)
+            else:
+                buf.append(r)
+                if len(buf) >= 1000:
+                    cPickle.dump(map(list, buf), f, cPickle.HIGHEST_PROTOCOL)
+                    del buf[:]
+            yield r
+        f.close()
+        os.rename(tmppath, self.mempath)
 
     def __iter__(self):
-        return self.m(self.stream, *self.v, **self.d)
+        b = self.should_memoize()
+        if b and self.has_memoized(): 
+            print "Reusing memoized version of stream %s", self.mempath
+            return self.iter_memoized()
+        if b: 
+            print "Storing memoized item in %s" % self.mempath
+            return self.mem_iter(self.m(self.stream, *self.v, **self.d))
+        else: 
+            return self.m(self.stream, *self.v, **self.d)
 
     @classmethod
     def register(cls, name, m):
@@ -218,37 +286,6 @@ def pull(null_stream, **kwargs):
     fileExtension = None
     to_close = []
 
-    mempath = None
-    if kwargs.get('memoize', False): 
-        memoize_directory = kwargs.get('memoize_directory', None)
-        if not memoize_directory: 
-            ## TODO: not portable 
-            memoize_directory = "/tmp/pybabe-memoize-%s" % os.getenv('USER')
-        if not os.path.exists(memoize_directory): 
-            os.mkdir(memoize_directory)
-
-        s = cPickle.dumps(kwargs)
-        hashvalue = hash('3' + s)
-        mempath = os.path.join(memoize_directory, str(hashvalue))
-        if os.path.exists(mempath):
-            f = open(mempath)
-            try:
-                metainfo = None
-                while True:
-                    a = cPickle.load(f)
-                    if isinstance(a, list):
-                        for v in a: 
-                            yield metainfo.t._make(v)
-                    elif isinstance(a, StreamFooter):
-                        yield a 
-                    else:
-                        metainfo = StreamHeader.from_dict(a)
-                        yield metainfo
-            except EOFError:
-                f.close()
-                return 
-
-
     # Guess format 
 
     filename = kwargs.get('filename', None)
@@ -304,28 +341,8 @@ def pull(null_stream, **kwargs):
     ## Parse high level 
     i = BabeBase.pullFormats[format](format=fileExtension, stream=instream, kwargs=kwargs)
 
-    if kwargs.get('memoize', False):
-        f = open(mempath, "w")
-        buf = []
-        for r in i:
-            if isinstance(r, StreamHeader):
-                cPickle.dump(map(list, buf), f, cPickle.HIGHEST_PROTOCOL)
-                del buf[:]
-                cPickle.dump(r.as_dict(), f, cPickle.HIGHEST_PROTOCOL)
-            elif isinstance(r, StreamFooter):
-                cPickle.dump(map(list, buf), f, cPickle.HIGHEST_PROTOCOL)
-                del buf[:]
-                cPickle.dump(r, f, cPickle.HIGHEST_PROTOCOL)
-            else:
-                buf.append(r)
-                if len(buf) >= 1000:
-                    cPickle.dump(map(list, buf), f, cPickle.HIGHEST_PROTOCOL)
-                    del buf[:]
-            yield r
-        f.close()
-    else:
-        for r in i: 
-            yield r 
+    for r in i: 
+        yield r 
         
     if command:
         p.wait()
@@ -343,7 +360,9 @@ def split_ext(filename):
         fileExtension = fileExtension[1:]
     return (fileBaseName, fileExtension)
 
-        
+def to_list(instream):
+    return list(filter(lambda x : not isinstance(x, StreamMeta), instream))
+
 def push(instream, filename=None, filename_template = None, directory = None, stream = None, format=None, encoding=None, protocol=None, compress=None, stream_dict=None, **kwargs):
     outstream = None
     compress_format = None
@@ -439,4 +458,10 @@ def push(instream, filename=None, filename_template = None, directory = None, st
             s.close()
 
 BabeBase.registerFinalMethod('push', push)
+BabeBase.registerFinalMethod('to_list', to_list)
+
+
+
+
+
         
