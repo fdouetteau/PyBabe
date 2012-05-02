@@ -18,8 +18,8 @@ PULL_DB = {
         }, 
     'infinidb' : 
         {
-            'query_template' : '%{query};\n',
-            'command' : ['/usr/local/Calpont/mysql/bin/mysql', '--defaults-file=/usr/local/Calpont/mysql/my.cnf'],
+            'query_template' : '${query};\n',
+            'command' : ['/usr/local/Calpont/mysql/bin/mysql', '--defaults-file=/usr/local/Calpont/mysql/my.cnf', "--default-character-set", "utf8"],
             'separator' : '--delimiter=%s',
             'user' : '-u%s',
             'password' : '-p%s'
@@ -104,9 +104,10 @@ def pull_sql(false_stream, query=None, table=None, host=None, database_kind=None
         tmpfifo = None
         readstream = None
 
-    query = Template(db_params['query_template']).substitute(query=query, out_filename=tmpfifo.filename if tmpfifo else None)
+    print query
+    query_ins = Template(db_params['query_template']).substitute(query=query, out_filename=tmpfifo.filename if tmpfifo else None)
     p = Popen(c, stdin=PIPE, stdout=None if readstream else PIPE, stderr=None)
-    p.stdin.write(query)
+    p.stdin.write(query_ins)
     p.stdin.flush()
     p.stdin.close()
     dialect = sql_dialect()
@@ -185,19 +186,21 @@ def push_sql(stream, database_kind, table=None, host=None, create_table = False,
         if isinstance(row, StreamHeader):
             metainfo = row
             if not table: 
-                table = metainfo.name
+                table_name = metainfo.typename
+            else: 
+                table_name = table 
             p = Popen(c, stdin=PIPE, stdout=None, stderr=None)
 
 
             if drop_table: 
-                drop_table_query = db_params['drop_table'] % table
+                drop_table_query = db_params['drop_table'] % table_name
                 p.stdin.write(drop_table_query)
                 p.stdin.flush()
                 if p.returncode:
                     break
             if create_table:
                 fields = ','.join([name + ' varchar(255)' for name in metainfo.fields])
-                create_table_query = Template(db_params['create_table']).substitute(table=table, fields=fields)
+                create_table_query = Template(db_params['create_table']).substitute(table=table_name, fields=fields)
                 p.stdin.write(create_table_query)
                 p.stdin.flush()
                 if p.returncode:
@@ -212,13 +215,14 @@ def push_sql(stream, database_kind, table=None, host=None, create_table = False,
             if "import_query" in db_params:
                 p = Popen(c, stdin=PIPE, stdout=None, stderr=None)
                 tmpfifo = TempFifo()
-                import_query = db_params['import_query'] % (tmpfifo.filename, table) 
+                import_query = db_params['import_query'] % (tmpfifo.filename, table_name) 
                 p.stdin.write(import_query)
                 p.stdin.flush()
                 writestream = tmpfifo.open_write()
             elif 'load_command' in db_params:
-                load_command = [Template(s).substitute(table=table, database=database) for s in db_params['load_command']]
-                pp = Popen(load_command, stdin=PIPE, stdout=PIPE, stderr=None)
+                load_command = [Template(s).substitute(table=table_name, database=database) for s in db_params['load_command']]
+                print load_command 
+                pp = Popen(load_command, stdin=PIPE, stdout=None, stderr=None)
                 writestream = pp.stdin
             else:
                 raise Exception("Missing load_command or import_query in db_kind spec")
