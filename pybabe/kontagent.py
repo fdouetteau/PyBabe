@@ -7,18 +7,17 @@ import urllib
 from pytz import timezone, utc
 from compress_gz import get_content_list 
 import cgi
-from multiprocessing import Pool
+from multiprocessing.dummy import Pool
+from geo import get_gic
+import logging
+from subprocess import Popen, PIPE
+import os
 
-def get_url(date, kwargs):
-	kt_user = BabeBase.get_config_with_env("kontagent", "KT_USER", kwargs)
-	kt_pass = BabeBase.get_config_with_env("kontagent", "KT_PASS", kwargs)
-	kt_appid = BabeBase.get_config_with_env("kontagent", "KT_APPID", kwargs)
+def get_url(date, kt_user, kt_pass, kt_appid):
 	url = 'http://%s:%s@www.kontagent.com/data/raw_data/%s/%04u/%02u/%02u/%02u/?format=json' % (kt_user, kt_pass, kt_appid, date.year, date.month, date.day, date.hour)
 	return url 
 
-def change_url(url, kwargs):
-	kt_user = BabeBase.get_config_with_env("kontagent", "KT_USER", kwargs)
-	kt_pass = BabeBase.get_config_with_env("kontagent", "KT_PASS", kwargs)
+def add_password_to_url(url, kt_user, kt_pass):
 	return url.replace('www.kontagent.com', '%s:%s@www.kontagent.com' % (kt_user, kt_pass))
 
 def convert_to_datetime(d, referent_timezone):
@@ -45,56 +44,151 @@ def enumerate_period_per_hour(start_time, end_time, referent_timezone):
 		yield time
 		time = time + datetime.timedelta(hours=1)
 
-kt_msg = StreamHeader(tyename='ktg_msg', fields=['time',  'param', 'source_ip', 'referer'])
-messages = { 
-'apa':kt_msg.insert(typename='apa', fields=['u', 's', 'su', 'scheme']), 
-'pgr' :  kt_msg.insert(typename='pgr', fields=['s', 'ts', 'u', 'ip', 'fbx_ref', 'fbx_type', 'scheme']),
-'cpu' : kt_msg.insert(typename='cpu', fields=['s', 'b', 'g', 'lc', 'ls', 'f', 'scheme']),
-'apr' :  kt_msg.insert(typename='apr', fields=['s', 'scheme']),
-'evt' : kt_msg.insert(typename='evt', fields=['s', 'n', 'v', 'l', 'st1', 'st2', 'st3', 'scheme']),
-'ins' :  kt_msg.insert(typename='ins', fields=['s', 'r', 'u', 'st1', 'st2', 'st3', 'scheme']),
-'inr' : kt_msg.insert(typename='inr', fields=['u', 'i', 'r', 'st1', 'st2', 'st3', 'scheme']),
- 'pst' : kt_msg.insert(typename='pst', fields=['s', 'u', 'tu', 'st1', 'st2', 'st3', 'scheme']),
- 'psr' : kt_msg.insert(typename='psr', fields=['u', 'tu', 'i', 'r', 'st1', 'st2', 'st3', 'scheme']),
- 'nes' : kt_msg.insert(typename='nes', fields=['s', 'r', 'u', 'st1', 'st2', 'st3', 'scheme']),
- 'nei' :  kt_msg.insert(typename='pgr', fields=['u', 'i', 'r', 'st1', 'st2', 'st3', 'scheme']),
- 'mtu' : kt_msg.insert(typename='mtu', fields=['s', 'v', 'tu', 'st1', 'st2', 'st3', 'scheme']),
- 'ucc' : kt_msg.insert(typename='ucc', fields=['tu', 'i', 'su', 's', 'st1', 'st2', 'st3', 'scheme']),
- 'gci' : kt_msg.insert(typename='gci', fields=['gc1', 'gc2', 'gc3', 'gc4', 'scheme'])
-}
+kt_msg = StreamHeader(typename='ktg', fields=[
+			'date', 'hour', 'time', 
+			'name', 
+			# event  name.  VARCHAR(63)
+				# Customer event or: 
+				# ucc_new_install, ucc_old_install,
+				# or [event_type] 
+				# or gc1, gc2, gc3, gc4 
+			'uid', # user id  that performs the action  BIGINT
+				# also 'r' for  responses
+			'st1', 'st2', 'st3', 
+				# event subtyping  VARCHAR(63)
+				# for pgr : 
+				#   st1 = parsed referer
+				#   st2 = source_ip_country 
+				#   st3 = http or https 
+				# for cpu
+				# 	st1 = gender 
+				#   st2 = local country 
+				#   st3 = local state (us state)
+			'channel_type', # channel type or transaction type VARCHAR(63) 
+				# for pgr : fxb_ref or fx_type 
+			'value',  # value associated to event (or revenue)  INTEGER
+				 # for cpu : 
+				 # 	v = number of friends
+				 # for gc1, ...
+				 #  value for the goal
+			'level',  # user level associated to event          INTEGER
+				# for cpu
+				# 	l = age 
+			'recipients', # list of recipients uid, comma separated (ins,nes) VARCHAR(1023)
+			'tracking_tag', # unique tracking tag ( also match su : short tracking tag) VARCHAR(63)
+			'data', # JSON Payload + additional query parameters not processed VARCHAR(255)
+		])
 
-def parse_kontagent_file(base_date, buffers, f): 
-	for line in f: 
+def process_file(base_date, f):
+	gic = get_gic()
+	t = kt_msg.t 
+	yield kt_msg
+	for line in f:
+		line = line.rstrip('\n')
 		line_segments = line.split(' ')
 		if len(line_segments) != 5: 
 			continue
-		seconds, msgtype, params, source_ip, referer = line_segments 
+		seconds, msgtype, params_string, source_ip, referer = line_segments 
+		params = {}
+		for k, v in cgi.parse_qs(params_string).items():
+			params[k] = v[0]
 		minute=int(seconds)/60
 		second=int(seconds)%60
-		date = datetime.datetime(base_date.year, base_date.month, base_date.day, base_date.hour, minute, second)
-		header= messages[msgtype]
-		a = [date, params, source_ip, referer]
-		while len(a) < len(header.fields): 
-			a.append(None)
-		for k, v in cgi.parse_qs(params).items():
-			try:
-				i = header.fields.index(k)
-				a[i] = v[-1]
-			except ValueError:
-				continue
-		buffers[msgtype].append(a)
+		time = datetime.datetime(base_date.year, base_date.month, base_date.day, base_date.hour, minute, second)
+		date = datetime.date(time.year, time.month, time.day)
+		hour = time.hour
+		uid = params.get('s', None)
+		st1 = params.get('st1', None)
+		st2 = params.get('st2', None)
+		st3 = params.get('st3', None)
+		name = params.get('n', None)
+		channel_type = params.get('tu', None)
+		value = params.get('v', None)
+		level = params.get('l', None)
+		recipients = params.get('r', None) 
+		tracking_tag = params.get('u', None)
+		data = params.get('data', None)
+		if not name: 
+			name = msgtype 
+		if msgtype == "pgr": 
+			referer = referer.replace('\"', '')
+			if referer == '-':
+				referer = None
+			if referer:
+				srefs = referer.split('/')
+				if len(srefs) >= 3: 
+					st1 = srefs[2]
+			if source_ip:
+				try:
+					st2 = gic.country_code_by_addr(source_ip)
+				except :
+					pass
+			st3 = params.get('scheme', None)
+			channel_type = params.get('fbx_type', params.get('fbx_ref', None))
+		elif msgtype == 'cpu': 
+			st1 = params.get('g', None)
+			st2 = params.get('lc', None)
+			st3 = params.get('ls', None)
+			birth_year = params.get('b', None)
+			if birth_year:
+				level = base_date.year - int(birth_year)
+			value = params.get('f', None)
+		elif msgtype == 'gci': 
+			for g in ['gc1', 'gc2', 'gc3', 'gc4']: 
+				if g in params: 
+					name = g
+					value = int(params[g]) 
+					break
+		elif msgtype == 'ucc': 
+			if 'i' in params: 
+				name = "ucc_old_install" if params['i'] == '1'  else "ucc_new_install"
+		elif msgtype == 'psr':
+			uid = params.get('r', None)
+			recipients = None 
+		if 'su' in params:
+			tracking_tag = params['su']
+		yield t(date,hour,time,name,uid,
+			st1,st2,st3,
+			channel_type,value,level,
+			recipients,tracking_tag,data)
+	yield StreamFooter()
 
-def read_url(v):
-	(hour, file_url) = v
-	print hour, file_url
-	f = urllib.urlopen(file_url)
-	proc  = get_content_list(f, None)[0]
-	buffers = {}
-	for k in messages:
-		buffers[k] = []
-	parse_kontagent_file(hour, buffers, proc.stdout)
-	proc.wait()
-	return buffers
+log = logging.getLogger('kontagent')
+
+def filenameify(url):
+	return url.replace('http://', '') 
+
+def read_url_with_cache(url, kt_user, kt_pass, kt_file_cache):
+	"Read a kontagent file possibly from a cache (store in dir KT_FILECACHE)"
+	f = filenameify(url)
+	filepath = os.path.join(kt_file_cache, f)
+	print 'COUCOU', filepath
+	if os.path.exists(filepath):
+		log.info('Using filecache %s', filepath)
+		return filepath 
+	else:
+		tmpfile = os.path.join(kt_file_cache, str(hash(url)) + '.tmp')
+		command = ['wget', '--user', kt_user, '--password', kt_pass, '-q', '-O', tmpfile, url]
+		print command
+		p = Popen(command, stdin=PIPE)
+		p.stdin.close()
+		p.wait()
+		if p.returncode != 0:
+			raise Exception('Unable to retrieve %s' % url)
+		if not os.path.exists(os.path.dirname(filepath)):
+			try:
+				os.makedirs(os.path.dirname(filepath)) # ensure base directory exists.
+			except OSError, e: 
+				if e.errno == 17:  ## File Exists. 
+					pass
+				else:
+					raise e 
+		print tmpfile, filepath
+		if os.stat(tmpfile).st_size > 0: 
+			os.rename(tmpfile, filepath)
+			return filepath
+		else: 
+			raise Exception('Failed to retrieve url %s' % url)
 
 def pull_kontagent(nostream, start_time, end_time, sample_mode=False, **kwargs):
 	"""
@@ -109,30 +203,29 @@ def pull_kontagent(nostream, start_time, end_time, sample_mode=False, **kwargs):
 	KT_USER : user id
 	KT_APPID : id of the app
 	KT_PASS : password of the user 
+	KT_FILECACHE : local copy of kontagent files. 
+	Version 1.1
 	"""
 	referent_timezone = BabeBase.get_config_with_env("kontagent", "timezone", kwargs, "utc")
-	p = Pool(4)
+	kt_user = BabeBase.get_config_with_env("kontagent", "KT_USER", kwargs)
+	kt_pass = BabeBase.get_config_with_env("kontagent", "KT_PASS", kwargs)
+	kt_filecache = BabeBase.get_config_with_env(section='kontagent', key='KT_FILECACHE')
+	kt_appid = BabeBase.get_config_with_env("kontagent", "KT_APPID", kwargs)
 	for hour in enumerate_period_per_hour(start_time, end_time, referent_timezone): 
-		headers = {} 
-		buffers = {}
-		#print hour
-		for k in messages: 
-			headers[k] = messages[k].replace(partition=hour.strftime('%Y-%m-%d_%h'))
-			buffers[k] = []
-		url = get_url(hour, kwargs)
-		#print url
+		url = get_url(hour, kt_user, kt_pass, kt_appid)
+		log.info("Getting download urls from %s" % url)
 		s = urllib.urlopen(url).read()
-		#print s
-		file_urls = map(lambda url: change_url(url, kwargs), json.loads(s)) 
-		if sample_mode and len(file_urls) > 0:
+		file_urls = json.loads(s)
+		if sample_mode and len(file_urls) > 0: # Sample mode: just process the first file. 
 			file_urls = file_urls[:1]
-		buffers_list = p.map(read_url, [(hour, url) for url in file_urls])
-		for k in headers:
-			header = headers[k]
-			yield header
-			for buffers in buffers_list:
-				for a in buffers[k]:
-					yield header.t(*a)
-			yield StreamFooter()
+		p = Pool(8)
+		downloaded_files = p.map(lambda url: read_url_with_cache(url, kt_user, kt_pass, kt_filecache), file_urls)
+		p.close()
+		for f in downloaded_files:
+			gzip = Popen(['gzip', '-d', '-c', f], stdin=PIPE, stdout=PIPE)
+			for row in process_file(hour, gzip.stdout):
+				yield row 
+			gzip.stdin.close()
+			gzip.wait()
 
 BabeBase.register("pull_kontagent", pull_kontagent)

@@ -570,7 +570,9 @@ class TestKontagent(TestCase):
         end_time = '2012-04-23 12:00'
         a = Babe().pull_kontagent(start_time, end_time, sample_mode=True)
         buf = StringIO()
+        a = a.head(n=10)
         a.push(stream=buf, format='csv')
+        print buf.getvalue()
 
 class TestGeo(TestCase):
     s = "name,ip\nFlo,82.231.177.189\nFla,4.3.1.432\n"
