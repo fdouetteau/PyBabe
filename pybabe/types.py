@@ -30,10 +30,14 @@ def typefilter(elt):
                     d[t] = int(v)
                 elif g.group('float'):
                     d[t] = float(v)
-                elif g.group('date'):
-                    d[t] = parse_date(v)
-                elif g.group('datetime'):
+            else:
+                try: 
                     d[t] = parse_datetime(v)
+                except ValueError: 
+                    try: 
+                        d[t] = parse_date(v)
+                    except ValueError:
+                        pass
         if len(d) > 0:
             return elt._replace(**d)
         else:
