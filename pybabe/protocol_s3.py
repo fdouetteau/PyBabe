@@ -18,6 +18,7 @@ def push(filename_topush, filename_remote, **kwargs):
     k.set_contents_from_filename(filename_topush)
 
 class ReadLineWrapper(object):
+    "Overrride next to enumerate 'lines' instead of bytes "
     def __init__(self, obj):
         self.obj = obj
         self.it = self.doiter()

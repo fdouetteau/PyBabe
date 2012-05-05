@@ -341,7 +341,10 @@ def pull(null_stream, **kwargs):
     ## Parse high level 
     i = BabeBase.pullFormats[format](format=fileExtension, stream=instream, kwargs=kwargs)
 
+    #count = 0
     for r in i: 
+        #if count % 100000 == 1: 
+        #    print 'Processed %u lines' % count  
         yield r 
         
     if command:
