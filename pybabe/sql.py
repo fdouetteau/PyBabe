@@ -5,7 +5,7 @@ import csv
 from subprocess import Popen, PIPE
 import time
 from string import Template
-from itertools import imap
+from charset import UnicodeCSVWriter
 
 PULL_DB = { 
     'mysql' : 
@@ -226,7 +226,9 @@ def push_sql(stream, database_kind, table=None, host=None, create_table = False,
                 writestream = pp.stdin
             else:
                 raise Exception("Missing load_command or import_query in db_kind spec")
-            writer = csv.writer(writestream, dialect=sql_dialect()) 
+
+            writer = UnicodeCSVWriter(writestream, dialect=sql_dialect(), encoding="utf-8")
+            #writer = csv.writer(writestream, dialect=sql_dialect()) 
         elif isinstance(row, StreamFooter):
             if "import_query" in db_params:
                 tmpfifo.close()
