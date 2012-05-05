@@ -15,15 +15,22 @@ def linepull(stream, dialect, kwargs):
         yield metainfo.t._make([row.rstrip('\r\n')])
     yield StreamFooter()
             
+def build_value(x, null_value):
+    if x == null_value:
+        return None
+    else: 
+        return unicode(x, "utf-8")
+
 def csvpull(stream,  dialect, kwargs):
     reader = csv.reader(stream, dialect)        
     fields = kwargs.get('fields', None)
+    null_value = kwargs.get('null_value', "")
     if not fields:
         fields = reader.next()
     metainfo = StreamHeader(**dict(kwargs, fields=fields))
     yield metainfo
     for row in reader:
-        yield metainfo.t._make([unicode(x, 'utf-8') for x in row])
+        yield metainfo.t._make([build_value(x, null_value) for x in row])
     yield StreamFooter()
 
 def pull(format, stream,kwargs):                        

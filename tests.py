@@ -584,6 +584,14 @@ class TestGeo(TestCase):
         a.push(stream=buf, format="csv")
         self.assertEquals(buf.getvalue(), self.s2)
 
+class TestNullValue(TestCase):
+    s = "foo,bar\n1,2\n2,NULL\n"
+    s2 = "foo,bar\n1,2\n2,\n"
+    def test_null(self):
+        a = Babe().pull(stream=StringIO(self.s), format='csv', null_value="NULL")
+        buf = StringIO()
+        a = a.push(stream=buf, format="csv")
+        self.assertEquals(buf.getvalue(), self.s2)
 
 import code, traceback, signal
 
