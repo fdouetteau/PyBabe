@@ -56,6 +56,25 @@ class TestBasicFunction(TestCase):
         self.assertEqual(s, buf.getvalue())
         self.assertEqual(s, buf2.getvalue())
         
+
+class TestMultiPull(TestCase):
+    s = "a,b\n1,2\n3,4\n"
+    def test_multi(self):
+        a = Babe()
+        a = a.pull(stream=StringIO(self.s), format='csv').pull(stream=StringIO(self.s), format='csv')
+        buf = StringIO()
+        a.push(stream=buf, format='csv')
+        self.assertEquals(buf.getvalue(), self.s+self.s)
+
+    s2 = "a,b\n1,2\n3,4\n1,2\n3,4\n"
+    def test_multi2(self):
+        a = Babe()
+        a = a.pull(stream=StringIO(self.s), format='csv').pull(stream=StringIO(self.s), format='csv')
+        a = a.merge_substreams()
+        buf = StringIO()
+        a.push(stream=buf, format='csv')
+        self.assertEquals(buf.getvalue(), self.s2)
+
         
 test_csv_content = """foo,bar,f,d\n1,2,3.2,2010/10/02\n3,4,1.2,2011/02/02\n"""
         

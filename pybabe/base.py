@@ -288,12 +288,16 @@ def guess_format(compress_format, format, filename):
     
 
 
-def pull(null_stream, **kwargs):
+def pull(babe, **kwargs):
     fileExtension = None
     to_close = []
 
-    # Guess format 
+    # Existing iterator go first. 
+    if hasattr(babe, 'stream') and babe.stream:
+        for row in babe:
+            yield row
 
+    # Guess format             
     filename = kwargs.get('filename', None)
     stream = kwargs.get('stream', None)
     command = kwargs.get('command', None)
