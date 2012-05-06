@@ -164,6 +164,21 @@ def filterColumns(stream, typename=None, remove_fields=None, keep_fields=None):
 
 BabeBase.register('filterColumns', filterColumns)
 
+def filter_values(stream, **kwargs):
+    for row in stream:
+        if isinstance(row, StreamMeta):
+            yield row
+        else:
+            ok = True
+            for k in kwargs:
+                if not kwargs[k] == getattr(row, k):
+                    ok = False
+                    break 
+            if ok:
+                yield row
+
+BabeBase.register('filter_values', filter_values)
+
 def filter(stream, function):
     for row in stream:
         if isinstance(row, StreamMeta):

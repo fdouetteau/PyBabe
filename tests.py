@@ -385,6 +385,14 @@ class TestFilter(TestCase):
         buf = StringIO()
         a.push(stream=buf, format='csv')
         self.assertEquals(buf.getvalue(), 'a,b\n3,4\n')
+
+
+    def test_filter_values(self):
+        a = Babe().pull(stream=StringIO('a,b\n1,2\n3,4\n1,4\n'), format="csv").typedetect()
+        a = a.filter_values(a=3,b=4)
+        buf = StringIO()
+        a.push(stream=buf, format="csv")
+        self.assertEquals(buf.getvalue(), "a,b\n3,4\n")
     #def test_groupby_sum(self):
     #    a = Babe().pull(stream=StringIO('a,b\n1,2\n3,4\n1,4\n'), format="csv").typedetect()
     #    a = a.groupBy(key="a", reducer=lambda rows: rows + rows[0]._replace(b=sum([row.b for row in rows])))
