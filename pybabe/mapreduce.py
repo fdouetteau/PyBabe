@@ -5,13 +5,13 @@ import cPickle
 import heapq
 import itertools
 
-def sort(stream, key):
+def sort(stream, field):
     buf = []
     for elt in stream:
         if isinstance(elt, StreamHeader):
             yield elt
         elif isinstance(elt, StreamFooter):
-            buf.sort(key=lambda obj: getattr(obj, key))
+            buf.sort(key=lambda obj: getattr(obj, field))
             for row in buf:
                 yield row
             yield elt
@@ -20,7 +20,7 @@ def sort(stream, key):
         
 BabeBase.register('sort', sort)        
 
-def sort_diskbased(stream, key, nsize=100000):
+def sort_diskbased(stream, field, nsize=100000):
     buf = []
     files = []
     count = 0 
@@ -38,7 +38,7 @@ def sort_diskbased(stream, key, nsize=100000):
             yield elt
         elif isinstance(elt, StreamFooter):
             buf.sort()
-            iterables = [iter_on_file(f) for f in files] + [itertools.imap(lambda obj : (getattr(obj, key), obj), buf)]
+            iterables = [iter_on_file(f) for f in files] + [itertools.imap(lambda obj : (getattr(obj, field), obj), buf)]
             for (k, row) in  heapq.merge(*iterables):
                 yield row 
             yield elt
@@ -46,10 +46,10 @@ def sort_diskbased(stream, key, nsize=100000):
             buf.append(elt)
             count = count + 1
             if count % nsize == 0: 
-                buf.sort(key=lambda obj: getattr(obj, key))
+                buf.sort(key=lambda obj: getattr(obj, field))
                 f = TemporaryFile()
                 for item in buf:
-                    cPickle.dump((getattr(item, key), list(item)), f, cPickle.HIGHEST_PROTOCOL)
+                    cPickle.dump((getattr(item, field), list(item)), f, cPickle.HIGHEST_PROTOCOL)
                 f.flush()
                 files.append(f)
                 del buf[:]
