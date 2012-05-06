@@ -1,7 +1,7 @@
 
 from base import BabeBase
 from cStringIO import StringIO
-
+import fnmatch 
 def get_bucket(kwargs):
     from boto.s3.connection import S3Connection
     key_id = BabeBase.get_config_with_env('s3', 'AWS_ACCESS_KEY_ID', kwargs)
@@ -16,6 +16,24 @@ def push(filename_topush, filename_remote, **kwargs):
     k = Key(bucket)
     k.key = filename_remote
     k.set_contents_from_filename(filename_topush)
+
+def get_key(bucket, filename):
+    if filename.find('?') >= 0 or filename.find('*') >= 0:
+        comp = filename.rsplit('/', 1)
+        p  = comp[0] + '/' if len(comp) > 1 else ''
+        pattern = comp[1] if len(comp) > 1 else comp[0]
+        match = None
+        for k in bucket.list(p):
+            if fnmatch.fnmatch(k.name[len(p):], pattern):
+                if match:
+                    raise Exception("Multiple key matching pattern %s : %s and %s ", (filename, k.name, match.name))
+                match = k
+        if match:
+            return match
+        else: 
+            raise Exception("No key matching pattern %s " % filename)
+    else:
+        return bucket.get_key(filename)
 
 class ReadLineWrapper(object):
     "Overrride next to enumerate 'lines' instead of bytes "
@@ -52,7 +70,7 @@ class ReadLineWrapper(object):
         
 def pull(filename_remote, **kwargs):
     bucket = get_bucket(kwargs)
-    key = bucket.get_key(filename_remote)
+    key = get_key(bucket, filename_remote)
     if not key: 
         raise Exception('Filename %s does not exist on %s' % (filename_remote, str(bucket))) 
     return ReadLineWrapper(key)

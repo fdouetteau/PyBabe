@@ -283,7 +283,31 @@ class TestS3(TestCase):
         buf = StringIO() 
         b.push(stream=buf, format='csv')
         self.assertEquals(buf.getvalue(), s)
-        
+
+
+    @skipUnless(can_connect_to_the_net(), 'Requires net connection')
+    def test_s3_glob(self):
+        s = "a,b\n1,2\n3,4\n"
+        buf1 = StringIO(s)
+        a = Babe().pull(stream=buf1, format='csv', name='Test')
+        a.push(filename='test_glob_4.csv', bucket='florian-test', protocol="s3") 
+        b = Babe().pull(filename='test_glob_?.csv', name='Test', bucket='florian-test', protocol="s3")
+        buf = StringIO() 
+        b.push(stream=buf, format='csv')
+        self.assertEquals(buf.getvalue(), s)
+     
+    @skipUnless(can_connect_to_the_net(), 'Requires net connection')
+    def test_s3_glob2(self):
+        s = "a,b\n1,2\n3,4\n"
+        buf1 = StringIO(s)
+        a = Babe().pull(stream=buf1, format='csv', name='Test')
+        a.push(filename='foofoobar/test_glob_4.csv', bucket='florian-test', protocol="s3") 
+        b = Babe().pull(filename='foofoobar/test_glob_?.csv', name='Test', bucket='florian-test', protocol="s3")
+        buf = StringIO() 
+        b.push(stream=buf, format='csv')
+        self.assertEquals(buf.getvalue(), s)
+
+
 class TestMapTo(TestCase):
     def test_tuple(self):
         a = Babe().pull(filename='tests/test.csv', name='Test').typedetect()
