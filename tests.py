@@ -673,6 +673,16 @@ class TestNullValue(TestCase):
         a = a.push(stream=buf, format="csv")
         self.assertEquals(buf.getvalue(), self.s2)
 
+class TestDate(TestCase):
+    s = "foo,time\n1,2012-04-03 00:33\n"
+    s2 = "foo,time,date,hour\n1,2012-04-02 22:33:00+00:00,2012-04-02,22\n"
+    def test_parse(self):
+        a = Babe().pull(stream=StringIO(self.s), format='csv')
+        buf = StringIO()
+        a = a.parse_time(field="time", output_time="time", output_date="date", output_hour="hour", input_timezone="CET", output_timezone="GMT")
+        a.push(stream=buf, format='csv')
+        self.assertEquals(buf.getvalue(), self.s2)
+
 import code, traceback, signal
 
 def debug(sig, frame):
