@@ -574,6 +574,16 @@ class TestKontagent(TestCase):
         a.push(stream=buf, format='csv')
         print buf.getvalue()
 
+    def test_load_partition(self):
+        start_time = '2012-04-23 11:00'
+        end_time = '2012-04-23 12:00'
+        a = Babe().pull_kontagent(start_time, end_time, sample_mode=True)
+        a = a.head(n=10)
+        d = {}
+        a.push(stream_dict=d, format='csv')
+        self.assertEquals(list(d.keys()), ['2012-04-23_11'])
+
+
 class TestGeo(TestCase):
     s = "name,ip\nFlo,82.231.177.189\nFla,4.3.1.432\n"
     s2 = "name,ip,country_code\nFlo,82.231.177.189,FR\nFla,4.3.1.432,US\n"

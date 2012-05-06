@@ -10,7 +10,13 @@ import ConfigParser
 import cPickle
 from string import Template
 from cStringIO import StringIO
-import sys
+
+try:
+    from collections import OrderedDict
+    ordered_dict = OrderedDict
+except ImportError:
+    from ordereddict import OrderedDict
+    ordered_dict = OrderedDict
 
 def my_import(name):
     mod = __import__(name)
@@ -79,11 +85,11 @@ class StreamHeader(StreamMeta):
         return StreamHeader(typename=typename if typename else self.typename,
             fields=fields if fields else self.fields, 
             t = self.t if not fields or typename else None, 
-            partition=partition if partition else self.partition,
+            partition=ordered_dict(partition) if partition else self.partition,
             source = self.source)
 
     def get_stream_name(self): 
-        return '_'.join(filter(None, [self.source, '_'.join(self.partition.values())]))
+        return '_'.join(filter(None, [self.source, '_'.join(map(str, self.partition.values()))]))
 
     def get_primary_identifier(self, row, linecount):
         """Retrieve a primary identifier associated with a row

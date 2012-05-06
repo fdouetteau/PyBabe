@@ -5,7 +5,6 @@ from timeparse import parse_date, parse_datetime
 import json
 import urllib
 from pytz import timezone, utc
-from compress_gz import get_content_list 
 import cgi
 from multiprocessing.dummy import Pool
 from geo import get_gic
@@ -40,7 +39,9 @@ def enumerate_period_per_hour(start_time, end_time, referent_timezone):
 	start_time = convert_to_datetime(start_time, referent_timezone)
 	end_time = convert_to_datetime(end_time, referent_timezone)
 	time = start_time
+	print start_time, end_time
 	while time < end_time: 
+		print time
 		yield time
 		time = time + datetime.timedelta(hours=1)
 
@@ -82,7 +83,6 @@ kt_msg = StreamHeader(typename='ktg', fields=[
 def process_file(base_date, f):
 	gic = get_gic()
 	t = kt_msg.t 
-	yield kt_msg
 	for line in f:
 		line = line.rstrip('\n')
 		line_segments = line.split(' ')
@@ -151,7 +151,6 @@ def process_file(base_date, f):
 			st1,st2,st3,
 			channel_type,value,level,
 			recipients,tracking_tag,data)
-	yield StreamFooter()
 
 log = logging.getLogger('kontagent')
 
@@ -210,6 +209,8 @@ def pull_kontagent(nostream, start_time, end_time, sample_mode=False, **kwargs):
 	kt_user = BabeBase.get_config_with_env("kontagent", "KT_USER", kwargs)
 	kt_pass = BabeBase.get_config_with_env("kontagent", "KT_PASS", kwargs)
 	kt_filecache = BabeBase.get_config_with_env(section='kontagent', key='KT_FILECACHE')
+	if not os.path.exists(kt_filecache):
+		os.makedirs(kt_filecache)
 	kt_appid = BabeBase.get_config_with_env("kontagent", "KT_APPID", kwargs)
 	for hour in enumerate_period_per_hour(start_time, end_time, referent_timezone): 
 		url = get_url(hour, kt_user, kt_pass, kt_appid)
@@ -221,11 +222,14 @@ def pull_kontagent(nostream, start_time, end_time, sample_mode=False, **kwargs):
 		p = Pool(8)
 		downloaded_files = p.map(lambda url: read_url_with_cache(url, kt_user, kt_pass, kt_filecache), file_urls)
 		p.close()
+		header = kt_msg.replace(partition=[("date", datetime.date(hour.year, hour.month, hour.day)), ("hour", hour.hour)])
+		yield header
 		for f in downloaded_files:
 			gzip = Popen(['gzip', '-d', '-c', f], stdin=PIPE, stdout=PIPE)
 			for row in process_file(hour, gzip.stdout):
 				yield row 
 			gzip.stdin.close()
 			gzip.wait()
+		yield StreamFooter()
 
 BabeBase.register("pull_kontagent", pull_kontagent)
