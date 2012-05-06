@@ -28,7 +28,7 @@ class StreamHeader(StreamMeta):
     source = None
     typename = None
     fields = None
-    partition = None
+    partition = None # Dictionary describing the partition { field_name : field_value }
     primary_key = None
     t = None
 
@@ -83,7 +83,7 @@ class StreamHeader(StreamMeta):
             source = self.source)
 
     def get_stream_name(self): 
-        return '_'.join(filter(None, [self.source, self.partition]))
+        return '_'.join(filter(None, [self.source, '_'.join(self.partition.values())]))
 
     def get_primary_identifier(self, row, linecount):
         """Retrieve a primary identifier associated with a row
@@ -414,7 +414,10 @@ def push(instream, filename=None, filename_template = None, directory = None, st
             break 
 
         if not filename and filename_template:
-            this_filename = Template(filename_template).substitute(header.__dict__)
+            d = header.__dict__.copy()
+            if header.partition:
+                d.update(header.partition)
+            this_filename = Template(filename_template).substitute(d)
 
         if directory and filename:
             this_filename = os.path.join(directory, this_filename if this_filename else filename)

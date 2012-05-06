@@ -562,7 +562,7 @@ class TestPartition(TestCase):
     def test_partition_s3(self):
         a = Babe().pull(stream=StringIO(self.s), format='csv')
         a = a.partition(field = 'date')
-        a.push(protocol="s3", bucket="florian-test", format="csv", filename_template='foobar/$partition.csv.gz')
+        a.push(protocol="s3", bucket="florian-test", format="csv", filename_template='foobar/$date.csv.gz')
 
 class TestKontagent(TestCase):
     def test_load(self):
