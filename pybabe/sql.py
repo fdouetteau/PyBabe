@@ -48,6 +48,7 @@ PUSH_DB = {
         'drop_table' : 'DROP TABLE IF EXISTS %s;\n',  
         'create_table' : 'CREATE TABLE IF NOT EXISTS ${table} ( ${fields} );\n', 
         'import_query': '.separator "\t"\n.import %s %s\n', # Import into database. 
+        'delete_partition' : 'DELETE FROM ${table} where ${condition};\n'
     }, 
     'mysql' : 
     { 
@@ -56,14 +57,16 @@ PUSH_DB = {
         'password' : '-p%s',
         'drop_table' : 'DROP TABLE IF EXISTS %s;\n', 
         'create_table' : 'CREATE TABLE IF NOT EXISTS ${table} ( ${fields} );\n', 
-        'import_query' : "LOAD DATA LOCAL INFILE '%s' INTO TABLE %s FIELDS TERMINATED BY '\t';\n"
+        'import_query' : "LOAD DATA LOCAL INFILE '%s' INTO TABLE %s FIELDS TERMINATED BY '\t';\n",
+        'delete_partition' : 'DELETE FROM ${table} where ${condition};\n'
     }, 
     'vectorwise' : 
     { 
         'load_command' : ['vwload', '-f', '\t', '--table', '${table}', '${database}', '/dev/stdin'], 
         'command' : ['sql', '-S'], 
         'drop_table' : 'DROP TABLE IF EXISTS %s;commit;', 
-        "create_table" : "CREATE TABLE  ${table} ( ${fields} );commit;\\g"
+        "create_table" : "CREATE TABLE  ${table} ( ${fields} );commit;\\g",
+        'delete_partition' : 'DELETE FROM ${table} where ${condition};\\g'
     }
 }
 
@@ -171,7 +174,7 @@ class TempFifo(object):
 
 
 
-def push_sql(stream, database_kind, table=None, host=None, create_table = False, drop_table = False, protocol=None, database=None, ssh_host=None, user=None, password=None,sql_command=None, **kwargs):
+def push_sql(stream, database_kind, table=None, host=None, create_table = False, drop_table = False, protocol=None, database=None, ssh_host=None, user=None, password=None,sql_command=None, delete_partition=False, **kwargs):
     db_params = PUSH_DB[database_kind]
     c = db_params['command']
     if user:
@@ -198,10 +201,22 @@ def push_sql(stream, database_kind, table=None, host=None, create_table = False,
                 p.stdin.flush()
                 if p.returncode:
                     break
+                    
             if create_table:
                 fields = ','.join([name + ' varchar(255)' for name in metainfo.fields])
                 create_table_query = Template(db_params['create_table']).substitute(table=table_name, fields=fields)
                 p.stdin.write(create_table_query)
+                p.stdin.flush()
+                if p.returncode:
+                    break
+
+            if delete_partition and not drop_table:
+                if not metainfo.partition:
+                    raise Exception("No partition information available in header: unable to delete partition")
+                conditions = ["%s = '%s'" % (k, str(v)) for (k, v) in metainfo.partition.iteritems()]
+                condition = ' AND '.join(conditions)
+                delete_partition_query = Template(db_params['delete_partition']).substitute(table=table_name, condition=condition)
+                p.stdin.write(delete_partition_query)
                 p.stdin.flush()
                 if p.returncode:
                     break

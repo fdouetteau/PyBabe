@@ -156,7 +156,7 @@ class TestSort(TestCase):
         s = '\n'.join(['k,v'] + [ '%u,%u' % (i,-i) for i in xrange(0,100001)])
         a = babe.pull(stream=StringIO(s), name='test', format='csv')
         a = a.typedetect()
-        a = a.sort(key='v')
+        a = a.sort(field='v')
         a = a.head(n=1)
         buf = StringIO()
         a = a.push(stream=buf, format='csv')
@@ -167,7 +167,7 @@ class TestSort(TestCase):
         s = '\n'.join(['k,v'] + [ '%u,%u' % (i,-i) for i in xrange(0,100001)])
         a = babe.pull(stream=StringIO(s), name='test', format='csv')
         a = a.typedetect()
-        a = a.sort_diskbased(key='v', nsize=10000)
+        a = a.sort_diskbased(field='v', nsize=10000)
         a = a.head(n=1)
         buf = StringIO()
         a = a.push(stream=buf, format='csv')
@@ -492,6 +492,31 @@ class TestBuzzData(TestCase):
         a.push(stream=buf, format='csv')
 
 
+class TestSQLPartition(TestCase):
+    s = 'id,value,s\n1,coucou,4\n2,blabla,5\n3,coucou,6\n4,tutu,4\n'
+
+    s2 = 'id,value,s\n1,coucou,5\n5,foo,bar\n'
+
+    sr = 'id,value,s\n1,coucou,5\n2,blabla,5\n3,coucou,6\n4,tutu,4\n5,foo,bar\n'
+
+    @skipUnless(can_execute('sqlite3'),  "Requires sqlite3 installed")
+    def test_pushsqlite_partition(self):
+        a = Babe().pull(stream=StringIO(self.s), format='csv')
+        a = a.typedetect()
+        a.push_sql(table='test_table', database_kind='sqlite', database='test.sqlite', drop_table = True, create_table=True)
+
+        a = Babe().pull(stream=StringIO(self.s2), format='csv')
+        a = a.typedetect()
+        a = a.partition(field='id')
+        a.push_sql(table='test_table', database_kind='sqlite', database='test.sqlite', delete_partition=True)
+
+        b = Babe().pull_sql(database_kind='sqlite', database='test.sqlite', table='test_table')
+        b = b.sort(field="id")
+        buf = StringIO()
+        b.push(stream=buf, format='csv', delimiter=',')
+        self.assertEquals(buf.getvalue(), self.sr)
+
+
 class TestSQL(TestCase):
     s = 'id,value,s\n1,coucou,4\n2,blabla,5\n3,coucou,6\n4,tutu,4\n'
 
@@ -504,6 +529,8 @@ class TestSQL(TestCase):
         buf = StringIO()
         b.push(stream=buf, format='csv', delimiter=',')
         self.assertEquals(buf.getvalue(), self.s)
+
+
 
     @skipUnless(can_execute('mysql'),  "Requires mysql client")
     def test_mysql(self):
