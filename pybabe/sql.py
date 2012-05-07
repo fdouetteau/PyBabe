@@ -182,6 +182,9 @@ def push_sql(stream, database_kind, table=None, host=None, create_table = False,
     if password:
         c = c + [db_params['password']%password]
     
+    if not database:
+        raise Exception("Missing parameter (database)")
+
     c = c + [database]
     
 
@@ -192,7 +195,10 @@ def push_sql(stream, database_kind, table=None, host=None, create_table = False,
                 table_name = metainfo.typename
             else: 
                 table_name = table 
+
             p = Popen(c, stdin=PIPE, stdout=None, stderr=None)
+
+
 
 
             if drop_table: 
@@ -201,7 +207,7 @@ def push_sql(stream, database_kind, table=None, host=None, create_table = False,
                 p.stdin.flush()
                 if p.returncode:
                     break
-                    
+
             if create_table:
                 fields = ','.join([name + ' varchar(255)' for name in metainfo.fields])
                 create_table_query = Template(db_params['create_table']).substitute(table=table_name, fields=fields)
