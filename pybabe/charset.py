@@ -3,7 +3,7 @@
 import codecs
 import csv
 import cStringIO
-
+import datetime
 
 ## From samples in http://docs.python.org/library/csv.html
 
@@ -42,6 +42,14 @@ class PrefixReader(object):
         yield self.prefix
         for k in self.stream:
             yield k 
+
+def write_value(s):
+    if isinstance(s, unicode):
+        return s.encode('utf-8')
+    elif isinstance(s, datetime.datetime):
+        return s.strftime('%Y-%m-%d %H:%M:%S') # Remove timezone
+    else:
+        return s
             
 class UnicodeCSVWriter:
     """
@@ -63,7 +71,7 @@ class UnicodeCSVWriter:
         self.encoder = codecs.getincrementalencoder(encoding)()
 
     def writerow(self, row):
-        self.writer.writerow([s.encode("utf-8") if isinstance(s, unicode) else s for s in row])
+        self.writer.writerow(map(write_value, row))
         # Fetch UTF-8 output from the queue ...
         data = self.queue.getvalue()
         data = data.decode("utf-8")
