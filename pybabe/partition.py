@@ -4,12 +4,12 @@ from base import BabeBase, StreamHeader, StreamFooter
 def equals_types(t1, t2):
 	return t1._fields == t2._fields
 
-def merge_substreams(stream):
+def merge_substreams(stream, partition=None):
 	header = None
 	for row in stream: 
 		if isinstance(row, StreamHeader):
 			if header == None:
-				header = row
+				header = row.replace(partition=partition)
 				yield header
 			else:
 				if not equals_types(header.t, row.t):
