@@ -4,7 +4,7 @@ from pytz import timezone
 from base import StreamMeta, StreamHeader, BabeBase
 
 
-time_formats = ['%H:%M', '%I:%M%p', '%H', '%I%p', '%I%p%M']
+time_formats = ['%H:%M', '%I:%M%p', '%H', '%I%p', '%I%p%M', '%I:%M:%S']
 
 
 # Date possible format by order of precedence
@@ -44,10 +44,10 @@ def parse_datetime(string):
         except ValueError:
             pass
 
-    raise ValueError()
+    raise ValueError(string)
 
 
-def stream_parse_datetime(stream, field,  input_timezone, output_timezone, output_date=None, output_time=None, output_hour=None):
+def stream_parse_datetime(stream, field, input_timezone, output_timezone, output_date=None, output_time=None, output_hour=None):
     input_tz = timezone(input_timezone)
     output_tz = timezone(output_timezone)
     header = None
