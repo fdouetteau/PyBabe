@@ -3,6 +3,9 @@ from base import BabeBase, StreamHeader, StreamFooter
 import csv
 from charset import UTF8Recoder, UTF8RecoderWithCleanup, PrefixReader, UnicodeCSVWriter
 import codecs
+import logging 
+
+log = logging.getLogger("csv")
 
 def linepull(stream, dialect, kwargs):
     it = iter(stream)
@@ -25,12 +28,19 @@ def csvpull(stream,  dialect, kwargs):
     reader = csv.reader(stream, dialect)        
     fields = kwargs.get('fields', None)
     null_value = kwargs.get('null_value', "")
+    ignore_malformed = kwargs.get('ignore_bad_lines', False)
     if not fields:
         fields = reader.next()
     metainfo = StreamHeader(**dict(kwargs, fields=fields))
     yield metainfo
     for row in reader:
-        yield metainfo.t._make([build_value(x, null_value) for x in row])
+        try:
+            yield metainfo.t._make([build_value(x, null_value) for x in row])
+        except TypeError, e:
+            if ignore_malformed:
+                log.warn("Malformed line: %s" % row)
+            else:
+                raise e
     yield StreamFooter()
 
 def pull(format, stream,kwargs):                        
