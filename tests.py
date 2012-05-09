@@ -226,6 +226,14 @@ class TestTransform(TestCase):
         a.push(stream=buf, format='csv')
         self.assertEquals(buf.getvalue(), self.s2)
 
+    sr ='city,b,c\nPARIS,foo,bar\nLONDON,barbar,salut\n'
+    def test_replace(self):
+        a = Babe().pull(stream=StringIO(self.s), format="csv")
+        a = a.replace_in_string("cou", "bar", field="b")
+        buf = StringIO()
+        a.push(stream=buf, format="csv")
+        self.assertEquals(buf.getvalue(), self.sr)
+
 
 class TestHTTP(TestCase):
     def setUp(self):
