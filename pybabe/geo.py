@@ -23,7 +23,7 @@ def get_gic():
     return gic 
 
 
-def geoip_country_code(stream, field="ip", country_code="country_code", geoip_file = None): 
+def geoip_country_code(stream, field="ip", country_code="country_code", ignore_error=False, geoip_file = None): 
     """"
 Add a 'country_code' field from IP address in field "IP"
     """
@@ -36,7 +36,14 @@ Add a 'country_code' field from IP address in field "IP"
             yield r
         else:
             ip = getattr(r, field)
-            cc = gic.country_code_by_addr(ip)
+            try: 
+                cc = gic.country_code_by_addr(ip)
+            except Exception, e:
+                if ignore_error:
+                    cc = None
+                    pass
+                else:
+                    raise e
             yield header.t(*(r + (cc,)))
 
 ## TODO : full region parsing
