@@ -710,6 +710,25 @@ class TestUserAgent(TestCase):
         a.push(stream=buf, format='csv')
         self.assertEquals(buf.getvalue(), self.s2)
 
+
+class TestSQLDump(TestCase):
+    s = """CREATE TABLE BLABLA;
+INSERT INTO `foobar` VALUES (11,435787,'Yes\\r\\nI\\\'m good.','2011-07-03 12:15:44'),(13,242393,'Foo','Bar');
+MORE BLABLA;
+"""
+    
+    s2= """id,number,title,datetime
+11,435787,"Yes\r
+I'm good.",2011-07-03 12:15:44
+13,242393,Foo,Bar
+"""
+
+    def test_sqldump(self):
+        a = Babe().pull(stream=StringIO(self.s), format='sql', table='foobar', fields=['id', 'number', 'title', 'datetime'])    
+        buf = StringIO()
+        a.push(stream=buf, format='csv')
+        self.assertEquals(buf.getvalue(), self.s2)
+
 import code, traceback, signal
 
 def debug(sig, frame):
