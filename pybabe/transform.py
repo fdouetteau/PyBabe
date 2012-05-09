@@ -188,6 +188,22 @@ def filter_values(stream, **kwargs):
 
 BabeBase.register('filter_values', filter_values)
 
+
+def filter_out_null_values(stream, fields): 
+    for row in stream:
+        if isinstance(row, StreamMeta):
+            yield row
+        else: 
+            keep = True 
+            for f in fields: 
+                if getattr(row, f) == None:
+                    keep = False 
+                    break 
+            if keep: 
+                yield row 
+
+BabeBase.register("filter_out_null_values", filter_out_null_values)
+
 def filter(stream, function):
     for row in stream:
         if isinstance(row, StreamMeta):
