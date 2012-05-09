@@ -2,5 +2,7 @@ encoding-cleaner==0.4
 pyftpdlib==0.7.0
 openpyxl==1.5.7
 boto==2.2.2
-tweepy==1.9xlrd==0.7.3
+tweepy==1.9
+xlrd==0.7.3
 pygeoip==0.2.3
+httpagentparser==1.0.5

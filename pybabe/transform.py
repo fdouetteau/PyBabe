@@ -56,6 +56,15 @@ def mapTo(stream, function, insert_fields = None, fields = None, typename = None
     
 BabeBase.register("mapTo", mapTo)
 
+def replace_string(stream, match, replacement, field):
+    for row in stream:
+        if isinstance(row, StreamMeta):
+            yield row
+        else:
+            yield row._replace({field:getattr(row, field).replace(match, replacement)})
+
+BabeBase.register("replace_string", replace_string)
+
 def flatMap(stream, function, insert_columns = None, columns = None, name = None):
     if insert_columns:
         metainfo = None

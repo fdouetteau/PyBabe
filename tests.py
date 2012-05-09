@@ -691,6 +691,17 @@ class TestDate(TestCase):
         a.push(stream=buf, format='csv')
         self.assertEquals(buf.getvalue(), self.s2)
 
+class TestUserAgent(TestCase):
+    s = "foo,useragent\n1,Mozilla/5.0 (Windows NT 5.1; rv:11.0) Gecko/20100101 Firefox/11.0\n"
+    s2= "foo,useragent,os,browser,browser_version\n1,Mozilla/5.0 (Windows NT 5.1; rv:11.0) Gecko/20100101 Firefox/11.0,Windows,Firefox,11.0\n"
+
+    def test_user_agent(self):
+        a = Babe().pull(stream=StringIO(self.s), format="csv")
+        buf = StringIO()
+        a = a.user_agent(field="useragent", output_os="os", output_browser="browser", output_browser_version="browser_version")
+        a.push(stream=buf, format='csv')
+        self.assertEquals(buf.getvalue(), self.s2)
+
 import code, traceback, signal
 
 def debug(sig, frame):
