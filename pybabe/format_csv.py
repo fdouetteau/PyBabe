@@ -38,7 +38,7 @@ def csvpull(stream,  dialect, kwargs):
             yield metainfo.t._make([build_value(x, null_value) for x in row])
         except TypeError, e:
             if ignore_malformed:
-                log.warn("Malformed line: %s" % row)
+                log.warn("Malformed line: %s, %s" % (row, e))
             else:
                 raise e
     yield StreamFooter()
@@ -50,6 +50,8 @@ def pull(format, stream,kwargs):
         stream = UTF8Recoder(stream, kwargs.get('encoding', None))
     else:
         pass
+
+    delimiter = kwargs.get('delimiter', None)
         
     sniff_read = stream.next()
     stream = PrefixReader(sniff_read, stream)
@@ -58,11 +60,13 @@ def pull(format, stream,kwargs):
         dialect.lineterminator = '\r\n'
     else:
         dialect.lineterminator = '\n'
-    if dialect.delimiter.isalpha():
+    if dialect.delimiter.isalpha() and not delimiter:
         # http://bugs.python.org/issue2078
         for row in  linepull(stream,  dialect, kwargs):
             yield row 
         return 
+    if delimiter:
+        dialect.delimiter = delimiter
     for row in csvpull(stream,  dialect, kwargs):
         yield row 
         
