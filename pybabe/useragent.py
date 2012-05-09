@@ -21,11 +21,12 @@ def user_agent(stream, field, output_os=None, output_browser=None, output_browse
 			o = do_detect(useragent)
 			d = []
 			if output_os:
-				d.append(o['os']['name'])
+				## On device such as "Ipad", os is in "flavor" and device name in "dist"
+				d.append(o['os']['name'] if 'os' in o else o['dist']['name'] if 'dist' in o else None) 
 			if output_browser:
-				d.append(o['browser']['name'])
+				d.append(o['browser']['name'] if 'browser' in o  else None)
 			if output_browser_version:
-				d.append(o['browser']['version'])
+				d.append(o['browser']['version'] if 'browser' in o and 'version' in o['browser'] else None)
 			yield header.t(*(row + tuple(d)))
 
 BabeBase.register("user_agent", user_agent)
