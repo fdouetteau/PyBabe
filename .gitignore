@@ -1,1 +1,4 @@
 *.pyc
+env
+.DS_Store
+.ropeproject
