@@ -36,7 +36,7 @@ def csvpull(stream,  dialect, kwargs):
     for row in reader:
         try:
             yield metainfo.t._make([build_value(x, null_value) for x in row])
-        except TypeError, e:
+        except Exception, e:
             if ignore_malformed:
                 log.warn("Malformed line: %s, %s" % (row, e))
             else:
