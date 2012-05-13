@@ -61,7 +61,11 @@ def replace_in_string(stream, match, replacement, field):
         if isinstance(row, StreamMeta):
             yield row
         else:
-            yield row._replace(**{field:getattr(row, field).replace(match, replacement)})
+            v = getattr(row, field)
+            if v is None:
+                yield row
+            else:
+                yield row._replace(**{field:v.replace(match, replacement)})
 
 BabeBase.register("replace_in_string", replace_in_string)
 
@@ -112,17 +116,20 @@ BabeBase.register("flatMap", flatMap)
 
       
 def head(stream, n):
-    """Retrieve only the first n lines of each stream"""
+    """Retrieve only the first n lines of the first stream"""
     for row in stream: 
         if isinstance(row, StreamHeader):
             count = 0 
         elif isinstance(row, StreamFooter):
-            pass
+            yield row
+            break 
         else: 
             if count >= n: 
+                yield StreamFooter()
                 break
             count = count + 1
         yield row
+
 BabeBase.register('head', head)
 
 def split(stream, field, separator):
