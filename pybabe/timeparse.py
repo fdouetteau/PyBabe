@@ -2,13 +2,13 @@
 import time, datetime
 from pytz import timezone
 from base import StreamMeta, StreamHeader, BabeBase
+import re
 
-
-time_formats = ['%H:%M', '%I:%M%p', '%H', '%I%p', '%I%p%M', '%H:%M:%S']
+time_formats = ['%H:%M:%S', '%H:%M', '%I:%M%p', '%H', '%I%p', '%I%p%M']
 
 
 # Date possible format by order of precedence
-date_formats = ['%d %m %Y', '%Y %m %d', '%d %B %Y', '%B %d %Y',
+date_formats = ['%Y %m %d','%d %m %Y',  '%d %B %Y', '%B %d %Y',
                                                   '%d %b %Y', '%b %d %Y',
                           '%d %m %y', '%y %m %d', '%d %B %y', '%B %d %y',
                                                   '%d %b %y', '%b %d %y']
@@ -31,11 +31,14 @@ def parse_date(string):
 
     raise ValueError()
     
+pat = r"[-/,]"
+pattern = re.compile(pat)
+
 def parse_datetime(string):
     string = string.strip()
     if not string: return None
     
-    string = string.replace('/',' ').replace('-',' ').replace(',',' ')
+    string = pattern.sub(' ', string)
     
     for format in date_time_formats:
         try:
@@ -64,15 +67,15 @@ def stream_parse_datetime(stream, field, input_timezone, output_timezone, output
         else: 
             time_value  = input_tz.localize(parse_datetime(getattr(row, field)))
             time_value_ext = time_value.astimezone(output_tz)
-            d = row._asdict()
+            d = []
+            if output_time:
+                d.append(time_value_ext)
             if output_date:
                 date = datetime.date(time_value_ext.year, time_value_ext.month, time_value_ext.day)
-                d[output_date] = date
-            if output_time:
-                d[output_time] = time_value_ext
+                d.append(date)
             if output_hour:
-                d[output_hour] = time_value_ext.hour
-            yield header.t(**d)
+                d.append(time_value_ext.hour)
+            yield header.t(*(row + tuple(d)))
 
 BabeBase.register("parse_time", stream_parse_datetime)
 
