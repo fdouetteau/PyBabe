@@ -50,7 +50,7 @@ def parse_datetime(string):
     raise ValueError(string)
 
 
-def stream_parse_datetime(stream, field, input_timezone, output_timezone, output_date=None, output_time=None, output_hour=None):
+def stream_parse_datetime(stream, field, input_timezone, output_timezone, output_date=None, output_time=None, output_hour=None, on_error=BabeBase.ON_ERROR_WARN):
     input_tz = timezone(input_timezone)
     output_tz = timezone(output_timezone)
     header = None
@@ -65,17 +65,31 @@ def stream_parse_datetime(stream, field, input_timezone, output_timezone, output
         elif isinstance(row, StreamMeta):
             yield row 
         else: 
-            time_value  = input_tz.localize(parse_datetime(getattr(row, field)))
-            time_value_ext = time_value.astimezone(output_tz)
-            d = []
-            if output_time:
-                d.append(time_value_ext)
-            if output_date:
-                date = datetime.date(time_value_ext.year, time_value_ext.month, time_value_ext.day)
-                d.append(date)
-            if output_hour:
-                d.append(time_value_ext.hour)
-            yield header.t(*(row + tuple(d)))
+            try: 
+                time_value  = input_tz.localize(parse_datetime(getattr(row, field)))
+                time_value_ext = time_value.astimezone(output_tz)
+                d = row._asdict()
+                if output_time:
+                    d[output_time] = time_value_ext
+                if output_date:
+                    date = datetime.date(time_value_ext.year, time_value_ext.month, time_value_ext.day)
+                    d[output_date] = date
+                if output_hour:
+                    d[output_hour] = time_value_ext.hour
+                yield header.t(**d)
+            except Exception, e: 
+                if on_error == BabeBase.ON_ERROR_WARN:
+                    BabeBase.log_warn("parse_time", row, e)
+                elif on_error == BabeBase.ON_ERROR_FAIL:
+                    raise e
+                elif on_error == BabeBase.ON_ERROR_SKIP:
+                    pass
+                elif on_error == BabeBase.ON_ERROR_NONE:
+                    d = row._asdict()
+                    for k in [output_time, output_date, output_hour]: 
+                        if k: 
+                            d[k] = None
+                    yield header.t(**d)
 
 BabeBase.register("parse_time", stream_parse_datetime)
 

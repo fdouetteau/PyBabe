@@ -10,6 +10,7 @@ import ConfigParser
 import cPickle
 from string import Template
 from cStringIO import StringIO
+import logging 
 
 try:
     from collections import OrderedDict
@@ -103,6 +104,8 @@ class StreamHeader(StreamMeta):
 class StreamFooter(StreamMeta): 
     pass 
 
+error_log = logging.getLogger("babe_errors")
+
 class BabeBase(object):
 
     pullFormats = {}
@@ -118,6 +121,15 @@ class BabeBase(object):
     pullCompressExtensions = {}
     pullProtocols = {}
     config = None
+
+    ON_ERROR_FAIL = "FAIL"
+    ON_ERROR_SKIP = "SKIP"
+    ON_ERROR_WARN = "WARN"
+    ON_ERROR_NONE = "NONE"
+
+    @classmethod
+    def log_warn(cls, function, row,e): 
+        error_log.warn("In %s %s: %s" % (function, str(e), row))
 
     @classmethod
     def get_config_object(cls):
