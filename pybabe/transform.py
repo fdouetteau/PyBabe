@@ -1,5 +1,6 @@
 
 from base import BabeBase, StreamHeader, StreamFooter, StreamMeta
+import re
       
 def mapTo(stream, function, insert_fields = None, fields = None, typename = None):
     """
@@ -220,6 +221,18 @@ def filter(stream, function):
                 yield row
 
 BabeBase.register('filter', filter)
+
+
+def filter_by_regexp(stream, field, regexp): 
+    pat = re.compile(regexp)
+    for row in stream: 
+        if isinstance(row, StreamMeta): 
+            yield row
+        else: 
+            if pat.match(getattr(row, field)):
+                yield row 
+
+BabeBase.register("filter_by_regexp", filter_by_regexp)
 
 def rename(stream, **kwargs):
     for row in stream:
