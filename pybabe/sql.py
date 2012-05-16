@@ -121,7 +121,10 @@ def pull_sql(false_stream, query=None, table=None, host=None, database_kind=None
     metainfo = StreamHeader(**dict(kwargs, typename=table, fields=fields))
     yield metainfo
     for row in reader:
-        if database_kind ==  'vectorwise': 
+        if database_kind ==  'vectorwise':
+            if len(row) == 0:
+                print 'Error, empty row: %s ' % row
+                continue
             row[-1] = row[-1][:-1]
         yield metainfo.t._make([unicode(x, 'utf-8') for x in row])
     p.wait()
