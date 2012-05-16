@@ -3,17 +3,19 @@ from base import BabeBase, StreamFooter, StreamHeader
 import sys
 import re 
 
-pattern = r"'((?:(?:\\.)|[^'\\])*)'|((?:\d|\.)+)" 
+pattern = r"'((?:(?:\\.)|[^'\\])*)'|((?:\d|\.)+)|(NULL)" 
 pat = re.compile(pattern)
 
 
 def parse_value(pos, line):
 	m = pat.match(line, pos)
 	if m: 
-		if m.lastindex ==1:
-			return (unescape(m.group(1)), m.end(0))
-		else: 
+		if m.lastindex == 3:
+			return (None, m.end(0)) 
+		elif m.lastindex ==2:
 			return (m.group(2), m.end(0))
+		else: 
+			return (unescape(m.group(1)), m.end(0))
 	else:
 		raise Exception("ParseError %s", line[pos:pos + 10 if pos+10 < len(line)-1 else len(line)-1 ])
 
