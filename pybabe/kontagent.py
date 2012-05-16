@@ -116,8 +116,11 @@ def process_file(base_date, f):
 				referer = None
 			if referer:
 				srefs = referer.split('/')
-				if len(srefs) >= 3: 
-					st1 = srefs[2]
+				if len(srefs) >= 3:
+					if srefs[2]  == "mailing-gift" and len(srefs) > 3:
+						st1 = srefs[2] + '/' + srefs[3]
+					else:
+						st1 = srefs[2]
 			if source_ip:
 				try:
 					st2 = gic.country_code_by_addr(source_ip)
@@ -161,14 +164,12 @@ def read_url_with_cache(url, kt_user, kt_pass, kt_file_cache):
 	"Read a kontagent file possibly from a cache (store in dir KT_FILECACHE)"
 	f = filenameify(url)
 	filepath = os.path.join(kt_file_cache, f)
-	print 'COUCOU', filepath
 	if os.path.exists(filepath):
-		log.info('Using filecache %s', filepath)
+		log.info('Kontagent: cache hit: %s', filepath)
 		return filepath 
 	else:
 		tmpfile = os.path.join(kt_file_cache, str(hash(url)) + '.tmp')
 		command = ['wget', '--user', kt_user, '--password', kt_pass, '-q', '-O', tmpfile, url]
-		print command
 		p = Popen(command, stdin=PIPE)
 		p.stdin.close()
 		p.wait()
@@ -182,9 +183,9 @@ def read_url_with_cache(url, kt_user, kt_pass, kt_file_cache):
 					pass
 				else:
 					raise e 
-		print tmpfile, filepath
 		if os.stat(tmpfile).st_size > 0: 
 			os.rename(tmpfile, filepath)
+			log.info('Kontagent: cache store: %s', filepath)
 			return filepath
 		else: 
 			raise Exception('Failed to retrieve url %s' % url)
@@ -214,7 +215,7 @@ def pull_kontagent(nostream, start_time, end_time, sample_mode=False, **kwargs):
 	kt_appid = BabeBase.get_config_with_env("kontagent", "KT_APPID", kwargs)
 	for hour in enumerate_period_per_hour(start_time, end_time, referent_timezone): 
 		url = get_url(hour, kt_user, kt_pass, kt_appid)
-		log.info("Getting download urls from %s" % url)
+		log.info("Kontagent: retrieving list: %s" % url)
 		s = urllib.urlopen(url).read()
 		file_urls = json.loads(s)
 		if sample_mode and len(file_urls) > 0: # Sample mode: just process the first file. 

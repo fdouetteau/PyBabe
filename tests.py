@@ -691,7 +691,7 @@ class TestNullValue(TestCase):
 
 class TestDate(TestCase):
     s = "foo,time\n1,2012-04-03 00:33\n"
-    s2 = "foo,time,date,hour\n1,2012-04-02 22:33:00+00:00,2012-04-02,22\n"
+    s2 = "foo,time,date,hour\n1,2012-04-02 22:33:00,2012-04-02,22\n"
     def test_parse(self):
         a = Babe().pull(stream=StringIO(self.s), format='csv')
         buf = StringIO()
@@ -728,6 +728,30 @@ I'm good.",2011-07-03 12:15:44
         buf = StringIO()
         a.push(stream=buf, format='csv')
         self.assertEquals(buf.getvalue(), self.s2)
+
+class TestJoin(TestCase):
+    s1 = "city,country\nParis,FR\nLondon,UK\nLyon,FR\n"
+    s2 = "country_code,country_name\nFR,France\nUK,United Kingdom\n"
+    s2_bis = "country_code,country_name\nFR,France\n"
+    sjoined = "city,country,country_name\nParis,FR,France\nLondon,UK,United Kingdom\nLyon,FR,France\n"
+    sjoined_bis = "city,country,country_name\nParis,FR,France\nLondon,UK,\nLyon,FR,France\n"
+
+
+    def test_join(self):
+        a = Babe().pull(stream=StringIO(self.s1), format='csv')
+        a = a.join(join_stream=Babe().pull(stream=StringIO(self.s2), format='csv'), key='country', join_key='country_code')
+        buf = StringIO()
+        a.push(stream=buf, format='csv')
+        self.assertEquals(buf.getvalue(), self.sjoined)
+
+    def test_join_none(self):
+        a = Babe().pull(stream=StringIO(self.s1), format='csv')
+        a = a.join(join_stream=Babe().pull(stream=StringIO(self.s2_bis), format='csv'), key='country', join_key='country_code', on_error=Babe.ON_ERROR_NONE)
+        buf = StringIO()
+        a.push(stream=buf, format='csv')
+        self.assertEquals(buf.getvalue(), self.sjoined_bis)
+
+
 
 import code, traceback, signal
 
