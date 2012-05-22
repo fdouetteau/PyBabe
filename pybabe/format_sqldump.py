@@ -57,20 +57,24 @@ def pull(format, stream, kwargs):
 	header = StreamHeader(fields=fields, table=table)
 	yield header 
 	prefix = "INSERT INTO `%s` VALUES " % table 
-	for line in stream: 
-		if not line.startswith(prefix):
-			continue
-		pos = len(prefix)
-		while pos < len(line):
-			(elts, pos) = parse_tuple(pos, line)
-			yield header.t(*elts)
-			if line[pos] == ',':
-				pos = pos+1
+	try: 
+		for line in stream: 
+			if not line.startswith(prefix):
 				continue
-			elif line[pos] == ';':
-				break
-			else:
-				raise Exception("ParseError pos %u " % pos)
+			pos = len(prefix)
+			while pos < len(line):
+				(elts, pos) = parse_tuple(pos, line)
+				yield header.t(*elts)
+				if line[pos] == ',':
+					pos = pos+1
+					continue
+				elif line[pos] == ';':
+					break
+				else:
+					raise Exception("ParseError pos %u " % pos)
+	except TypeError, e:
+		print len(elts), elts 
+		raise e
 	yield StreamFooter()
 
 BabeBase.addPullPlugin("sql", ["sql"], pull)
