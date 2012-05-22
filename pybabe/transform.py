@@ -354,3 +354,23 @@ def transpose(stream, typename=None):
 
 BabeBase.register('transpose', transpose)
 
+def build_row(header, row):
+    return header.t(*row)
+
+def insert_rows(stream, new_rows, before=True):
+    for row in stream:
+        if isinstance(row, StreamHeader):
+            yield row
+            if before: 
+                for r in new_rows: 
+                    yield build_row(row, r)
+        elif isinstance(row, StreamFooter):
+            if not before:
+                for r in new_rows:
+                    yield build_row(row,r)
+            yield row 
+        else:
+            yield row
+
+BabeBase.register('insert_rows', insert_rows)
+
