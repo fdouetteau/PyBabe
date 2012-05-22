@@ -5,13 +5,13 @@ import cPickle
 import heapq
 import itertools
 
-def sort(stream, field):
+def sort(stream, field, reverse=False):
     buf = []
     for elt in stream:
         if isinstance(elt, StreamHeader):
             yield elt
         elif isinstance(elt, StreamFooter):
-            buf.sort(key=lambda obj: getattr(obj, field))
+            buf.sort(key=lambda obj: getattr(obj, field), reverse=reverse)
             for row in buf:
                 yield row
             yield elt
