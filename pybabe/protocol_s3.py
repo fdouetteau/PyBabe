@@ -2,6 +2,8 @@
 from base import BabeBase
 from cStringIO import StringIO
 import fnmatch 
+import os
+
 def get_bucket(kwargs):
     from boto.s3.connection import S3Connection
     key_id = BabeBase.get_config_with_env('s3', 'AWS_ACCESS_KEY_ID', kwargs)
@@ -70,10 +72,25 @@ class ReadLineWrapper(object):
         
 def pull(filename_remote, **kwargs):
     bucket = get_bucket(kwargs)
+    cache = BabeBase.get_config("s3", "cache", default=False)
+    if cache: 
+        default_cache_dir = "/tmp/pybabe-s3-cache-%s" % os.getenv('USER')
+        cache_dir = BabeBase.get_config("s3", "cache_dir", default=default_cache_dir)
+        if not os.path.exists(cache_dir):
+            os.makedirs(cache_dir)
     key = get_key(bucket, filename_remote)
     if not key: 
         raise Exception('Filename %s does not exist on %s' % (filename_remote, str(bucket))) 
-    return ReadLineWrapper(key)
+    if cache: 
+        f = os.path.join(cache_dir, os.path.basename(key.name) + "-" + key.etag.replace('"', ''))
+        if os.path.exists(f): 
+            return open(f, "r")
+        else:
+            key.get_contents_to_filename(f + ".tmp")
+            os.rename(f + ".tmp", f)
+            return open(f, "r")
+    else:
+        return ReadLineWrapper(key)
 
 BabeBase.addProtocolPushPlugin('s3', push, None)
 BabeBase.addProtocolPullPlugin('s3', pull)
