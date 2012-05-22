@@ -80,7 +80,7 @@ class StreamHeader(StreamMeta):
             typename=typename if typename else self.typename, 
             source = self.source, 
             partition=  self.partition,
-            fields = self.fields + fields)
+            fields = self.fields + ([fields] if isinstance(fields, basestring) else fields))
 
     def replace(self, typename = None, fields = None, partition=partition):
         return StreamHeader(typename=typename if typename else self.typename,
@@ -140,9 +140,16 @@ class BabeBase(object):
         return cls.config
 
     @classmethod
-    def get_config(cls, section, key):
+    def get_config(cls, section, key, kwargs = {}, default=None):
+        if key in kwargs:
+            return kwargs[key]
         config = cls.get_config_object()
-        return config.get(section, key)
+        if config.has_option(section,key):
+            return config.get(section, key)
+        if default is not None:
+            return default
+        raise Exception("Unable to locate key %s from section %s in args, config or env" % (key, section))
+
         
     @classmethod    
     def get_config_with_env(cls, section, key, kwargs={}, default=None): 
