@@ -12,15 +12,16 @@ patterns = [r'(?P<int>-?[0-9]+)',
          
 pattern = re.compile('(' + '|'.join(patterns) + ')$')
 
-def typedetect(stream):
-    return itertools.imap(typefilter, stream)
+def typedetect(stream, fields=None):
+    return itertools.imap(lambda elt: typefilter(elt, fields), stream)
 
-def typefilter(elt):
+def typefilter(elt, fields):
     if isinstance(elt, StreamMeta):
         return elt
     else:
         d = {}
-        for t in elt._fields:
+        f = fields if fields else elt._fields
+        for t in f:
             v = getattr(elt, t)
             if not isinstance(v, basestring):
                 continue
