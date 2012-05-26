@@ -107,7 +107,6 @@ def pull_sql(false_stream, query=None, table=None, host=None, database_kind=None
         tmpfifo = None
         readstream = None
 
-    print query
     query_ins = Template(db_params['query_template']).substitute(query=query, out_filename=tmpfifo.filename if tmpfifo else None)
     p = Popen(c, stdin=PIPE, stdout=None if readstream else PIPE, stderr=None)
     p.stdin.write(query_ins)
