@@ -11,7 +11,8 @@ def join(stream, join_stream, key,join_key, add_fields=None, on_error=BabeBase.O
 			break 
 		else: 
 			k = getattr(row, join_key)
-			d[k] = row
+			if not k in d: 
+				d[k] = row
 
 	for row in stream: 
 		if isinstance(row, StreamHeader):
