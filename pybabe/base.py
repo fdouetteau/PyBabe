@@ -46,7 +46,7 @@ class StreamHeader(StreamMeta):
         self.fields = fields
         self.partition = partition
         self.primary_key = primary_key
-        if not self.typename: 
+        if not self.typename and source: 
             self.typename = StreamHeader.keynormalize(source)
         if not self.typename:
             self.typename = '_'.join(map(StreamHeader.keynormalize, self.fields))
