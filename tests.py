@@ -759,6 +759,14 @@ class TestTee(TestCase):
         self.assertEquals(len(b.to_list()), 1)
         self.assertEquals(len(c.to_list()), 1)
 
+class TestHTML(TestCase): 
+    s = "a,b\n1,2\n"
+    def test_html(self): 
+        a = Babe().pull(stream=StringIO(self.s), format="csv")
+        buf = StringIO()
+        a.push(stream=buf, format="html") 
+        print buf.getvalue()
+
 import code, traceback, signal
 
 def debug(sig, frame):
