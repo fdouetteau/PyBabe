@@ -289,6 +289,16 @@ class BabeBase(object):
     @classmethod
     def addProtocolPullPlugin(cls, protocol, m):
         cls.pullProtocols[protocol] = m
+
+    @classmethod
+    def getMimeType(cls, format): 
+        d = { 
+            'xls' : ('application', 'vnd.ms-excel'), 
+            'xlsx' : ('application', 'vnd.ms-excel'), 
+            'csv' : ('text', 'csv')
+        }
+        return d.get(format, ('application','octet-stream'))
+
     
 def get_extension(filename):
     if not filename:
