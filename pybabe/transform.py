@@ -116,20 +116,36 @@ def flatMap(stream, function, insert_columns = None, columns = None, name = None
 BabeBase.register("flatMap", flatMap)
 
       
-def head(stream, n):
-    """Retrieve only the first n lines of the first stream"""
-    for row in stream: 
-        if isinstance(row, StreamHeader):
-            count = 0 
-        elif isinstance(row, StreamFooter):
-            yield row
-            break 
-        else: 
-            if count >= n: 
-                yield StreamFooter()
+def head(stream, n, all_streams = False):
+    """Retrieve only the first n lines. 
+    If all_streams is true, apply head on each substream
+    Otherwise (default), only keep the first substream."""
+    if not all_streams:
+        for row in stream: 
+            if isinstance(row, StreamHeader):
+                count = 0 
+            elif isinstance(row, StreamFooter):
                 break
-            count = count + 1
-        yield row
+            else: 
+                if count >= n: 
+                    yield StreamFooter()
+                    break
+                count = count + 1
+            yield row
+    else:
+        skip = False 
+        for row in stream:
+            if isinstance(row, StreamHeader):
+                count = 0
+            elif isinstance(row, StreamFooter):
+                skip = False
+            else:
+                if count >= n: 
+                    skip = True 
+                count = count + 1 
+            if not skip:
+                yield row 
+
 
 BabeBase.register('head', head)
 
