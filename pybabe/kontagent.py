@@ -133,7 +133,7 @@ def process_file(base_date, f):
 			st2 = params.get('lc', None)
 			st3 = params.get('ls', None)
 			birth_year = params.get('b', None)
-			if birth_year:
+			if birth_year and birth_year.isdigit():
 				level = base_date.year - int(birth_year)
 			value = params.get('f', None)
 		elif msgtype == 'gci': 
