@@ -767,6 +767,14 @@ class TestHTML(TestCase):
         a.push(stream=buf, format="html") 
         print buf.getvalue()
 
+class TestMAIL(TestCase): 
+    s1 = "a,b\n1,2\n"
+    s2 = "c,d\n3,toto\n"
+    def test_mail(self):
+        a = Babe().pull(stream=StringIO(self.s1), source="Table 1", format='csv')
+        a = a.pull(stream=StringIO(self.s2), source="Table 2", format='csv')
+        a.sendmail(subject="Test", recipients="florian@douetteau.net", in_body=True)
+
 import code, traceback, signal
 
 def debug(sig, frame):
