@@ -33,9 +33,9 @@ class StreamMeta(object):
     pass
 
 class StreamHeader(StreamMeta):
-    source = None
-    typename = None
-    fields = None
+    source = None    # Describe the origin for  the data
+    typename = None  # Describe a datatype name for the row   
+    fields = None    # List of the fields 
     partition = None # Dictionary describing the partition { field_name : field_value }
     primary_key = None
     t = None
@@ -47,7 +47,7 @@ class StreamHeader(StreamMeta):
         self.partition = partition
         self.primary_key = primary_key
         if not self.typename: 
-            self.typename = source
+            self.typename = StreamHeader.keynormalize(source)
         if not self.typename:
             self.typename = '_'.join(map(StreamHeader.keynormalize, self.fields))
         self.t = t if t else namedtuple(self.typename, map(StreamHeader.keynormalize, self.fields))
@@ -91,7 +91,7 @@ class StreamHeader(StreamMeta):
             source = self.source)
 
     def get_stream_name(self): 
-        return '_'.join(filter(None, [self.source, '_'.join(map(str, self.partition.values()))]))
+        return '_'.join(filter(None, [self.source, '_'.join(map(str, self.partition.values() if self.partition else []))]))
 
     def get_primary_identifier(self, row, linecount):
         """Retrieve a primary identifier associated with a row
