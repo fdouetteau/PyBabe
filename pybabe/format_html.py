@@ -18,15 +18,15 @@ def write(format, header, instream, outfile, encoding, **kwargs):
     outfile.write("<h2>")
     outfile.write(header.get_stream_name())
     outfile.write("</h2>")
-    outfile.write('<table><tr>')
+    outfile.write('<table>\n<tr>')
     for field in header.fields:
         outfile.write("<th>")
         outfile.write(write_value(field, encoding))
         outfile.write("</th>")
-    outfile.write("</tr>")
+    outfile.write("</tr>\n")
     for row in instream: 
         if isinstance(row, StreamFooter): 
-            outfile.write("</table>")
+            outfile.write("</table>\n")
             break
         else: 
             outfile.write("<tr>")
@@ -34,6 +34,7 @@ def write(format, header, instream, outfile, encoding, **kwargs):
                 outfile.write("<td>")
                 outfile.write(write_value(cell, encoding))
                 outfile.write("</td>")
-            outfile.write("</tr>")
+            outfile.write("</tr>\n")
+
             
 BabeBase.addPushPlugin('html', ['html', 'htm'], write)   
