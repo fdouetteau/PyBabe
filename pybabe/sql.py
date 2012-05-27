@@ -80,6 +80,11 @@ def pull_sql(false_stream, query=None, table=None, host=None, database_kind=None
     command : Override the connection command string prefix
     """
 
+    # Existing iterator go first. 
+    if hasattr(false_stream, 'stream') and false_stream.stream:
+        for row in false_stream:
+            yield row
+
     db_params = PULL_DB[database_kind]
 
     if sql_command:
