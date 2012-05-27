@@ -15,6 +15,9 @@ def write_value(v, encoding):
 def write(format, header, instream, outfile, encoding, **kwargs):
     if not encoding: 
         encoding = "utf-8"
+    outfile.write("<h2>")
+    outfile.write(header.get_stream_name())
+    outfile.write("</h2>")
     outfile.write('<table><tr>')
     for field in header.fields:
         outfile.write("<th>")
