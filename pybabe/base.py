@@ -11,6 +11,7 @@ import cPickle
 from string import Template
 from cStringIO import StringIO
 import logging 
+import itertools
 
 try:
     from collections import OrderedDict
@@ -185,6 +186,14 @@ class BabeBase(object):
             return True
         else:
             return False
+
+    def tee(self, n): 
+        "Return N Identical Babes out of one."
+        if n == 1: 
+            return self 
+        else:
+            iterators = itertools.tee(self, n) 
+            return [self.get_iterator(iterator, lambda x : x, [], {}) for iterator in iterators]
 
     def iter_memoized(self):
         f = open(self.mempath)

@@ -751,7 +751,13 @@ class TestJoin(TestCase):
         a.push(stream=buf, format='csv')
         self.assertEquals(buf.getvalue(), self.sjoined_bis)
 
-
+class TestTee(TestCase):
+    s = "a,b\n1,2\n"
+    def test_tee(self):
+        a = Babe().pull(stream=StringIO(self.s), format="csv")
+        [b, c] = a.tee(2)
+        self.assertEquals(len(b.to_list()), 1)
+        self.assertEquals(len(c.to_list()), 1)
 
 import code, traceback, signal
 
