@@ -34,18 +34,20 @@ class StreamMeta(object):
 
 class StreamHeader(StreamMeta):
     source = None    # Describe the origin for  the data
+    description = None # Describe the data 
     typename = None  # Describe a datatype name for the row   
     fields = None    # List of the fields 
     partition = None # Dictionary describing the partition { field_name : field_value }
     primary_key = None
     t = None
 
-    def __init__(self, fields, source=None, typename=None,  partition = None, primary_key = None, t = None, **kwargs):
+    def __init__(self, fields, source=None, typename=None,  partition = None, primary_key = None, t = None, description=None, **kwargs):
         self.source = source
         self.typename = typename
         self.fields = fields
         self.partition = partition
         self.primary_key = primary_key
+        self.description = description
         if not self.typename and source: 
             self.typename = StreamHeader.keynormalize(source)
         if not self.typename:
@@ -322,7 +324,7 @@ def guess_format(compress_format, format, filename):
         return (None, format) 
     if ext in BabeBase.pullExtensions:
         return (compress_format, BabeBase.pullExtensions[ext])
-    raise Exception("Unable to guess extension")
+    raise Exception("Unable to guess extension %s for filename %s" % (ext, filename))
     
 
 

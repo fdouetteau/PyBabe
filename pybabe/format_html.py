@@ -18,6 +18,10 @@ def write(format, header, instream, outfile, encoding, **kwargs):
     outfile.write("<h2>")
     outfile.write(header.get_stream_name())
     outfile.write("</h2>")
+    if header.description:
+        outfile.write("<p><i>")
+        outfile.write(header.description)
+        outfile.write("</i></p>")
     outfile.write('<table>\n<tr>')
     for field in header.fields:
         outfile.write("<th>")
