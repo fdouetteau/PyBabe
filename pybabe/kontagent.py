@@ -80,7 +80,7 @@ kt_msg = StreamHeader(typename='ktg', fields=[
 			'data', # JSON Payload + additional query parameters not processed VARCHAR(255)
 		])
 
-def process_file(base_date, f):
+def process_file(base_date, f, discard_names):
 	gic = get_gic()
 	t = kt_msg.t 
 	for line in f:
@@ -110,6 +110,8 @@ def process_file(base_date, f):
 		data = params.get('data', None)
 		if not name: 
 			name = msgtype 
+		if name in discard_names: 
+			continue 
 		if msgtype == "pgr": 
 			referer = referer.replace('\"', '')
 			if referer == '-':
@@ -127,7 +129,12 @@ def process_file(base_date, f):
 				except :
 					pass
 			st3 = params.get('scheme', None)
-			channel_type = params.get('fbx_type', params.get('fbx_ref', None))
+		if msgtype == "apa" or msgtype == "pgr": 
+			for k in ["fbx_type", "fbx_ref", "ref", "fb_source"]: 
+				if not channel_type: 
+					channel_type = params.get(k, None)
+				else: 
+					break 
 		elif msgtype == 'cpu': 
 			st1 = params.get('g', None)
 			st2 = params.get('lc', None)
@@ -190,7 +197,7 @@ def read_url_with_cache(url, kt_user, kt_pass, kt_file_cache):
 		else: 
 			raise Exception('Failed to retrieve url %s' % url)
 
-def pull_kontagent(nostream, start_time, end_time, sample_mode=False, **kwargs):
+def pull_kontagent(nostream, start_time, end_time, sample_mode=False, discard_names=None, **kwargs):
 	"""
 	Generate streams from kontagent logs. 
 	Generates a stream per hour and per message type. The streams are outputed per hour. 
@@ -210,6 +217,10 @@ def pull_kontagent(nostream, start_time, end_time, sample_mode=False, **kwargs):
 	kt_user = BabeBase.get_config_with_env("kontagent", "KT_USER", kwargs)
 	kt_pass = BabeBase.get_config_with_env("kontagent", "KT_PASS", kwargs)
 	kt_filecache = BabeBase.get_config_with_env(section='kontagent', key='KT_FILECACHE')
+	if discard_names:
+		discard_names = set(discard_names)
+	else: 
+		discard_names = set()
 	if not os.path.exists(kt_filecache):
 		os.makedirs(kt_filecache)
 	kt_appid = BabeBase.get_config_with_env("kontagent", "KT_APPID", kwargs)
@@ -225,9 +236,9 @@ def pull_kontagent(nostream, start_time, end_time, sample_mode=False, **kwargs):
 		p.close()
 		header = kt_msg.replace(partition=[("date", datetime.date(hour.year, hour.month, hour.day)), ("hour", hour.hour)])
 		yield header
-		for f in downloaded_files:
-			gzip = Popen(['gzip', '-d', '-c', f], stdin=PIPE, stdout=PIPE)
-			for row in process_file(hour, gzip.stdout):
+		gzips = [Popen(['gzip', '-d', '-c', f], stdin=PIPE, stdout=PIPE) for f in downloaded_files]
+		for gzip in gzips:
+			for row in process_file(hour, gzip.stdout, discard_names):
 				yield row 
 			gzip.stdin.close()
 			gzip.wait()
