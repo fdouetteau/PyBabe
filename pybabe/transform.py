@@ -57,6 +57,39 @@ def mapTo(stream, function, insert_fields = None, fields = None, typename = None
     
 BabeBase.register("mapTo", mapTo)
 
+def bulkMapTo(stream, function, bulk_size, insert_fields = None, fields = None): 
+    header = None
+    buf = []
+    for row in stream: 
+        if isinstance(row, StreamHeader): 
+            if insert_fields: 
+                header = row.insert(typename=None, fields=insert_fields)
+            elif fields: 
+                header = row.insert(typename=None, fields=fields)
+            else:
+                header = row
+            yield header
+        elif isinstance(row, StreamFooter) or len(buf) == bulk_size - 1:
+            if not isinstance(row, StreamFooter): 
+                buf.append(row)
+            result =  function(buf)
+            if insert_fields:
+                for i, r in enumerate(result):
+                    print i,r
+                    yield header.t._make((buf[i] + tuple(r)))
+            else:
+                for r in result:
+                    yield header.t._make(r)
+            del buf[:]
+            if isinstance(row, StreamFooter):
+                yield row
+        else: 
+            buf.append(row)
+
+
+BabeBase.register("bulkMapTo", bulkMapTo)
+
+
 def replace_in_string(stream, match, replacement, field):
     for row in stream:
         if isinstance(row, StreamMeta):

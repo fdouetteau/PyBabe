@@ -328,6 +328,15 @@ class TestMapTo(TestCase):
 """
         self.assertEquals(buf.getvalue(), s) 
     
+    s = "a\n1\n2\n3\n4\n"
+    s2 = "a,b\n1,3\n2,3\n3,7\n4,7\n"
+    def test_bulk(self):
+        a = Babe().pull(stream=StringIO(self.s), format="csv")
+        a = a.typedetect() 
+        a = a.bulkMapTo(lambda list: [[sum([r.a for r in list])]] * len(list), bulk_size=2, insert_fields=["b"])
+        buf = StringIO()
+        a.push(stream=buf, format="csv")
+        self.assertEquals(buf.getvalue(), self.s2)
         
     def test_insert(self):
         a = Babe().pull(filename='tests/test.csv', name='Test').typedetect()
