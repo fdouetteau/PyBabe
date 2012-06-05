@@ -1,6 +1,6 @@
 
 from base import StreamHeader, BabeBase, StreamMeta
-import csv
+import csv,sys
 
 
 class log_dialect(csv.Dialect):
@@ -11,8 +11,11 @@ class log_dialect(csv.Dialect):
     quoting = csv.QUOTE_MINIMAL
     quotechar = '"'
 
-def log(stream, logfile):
-    if isinstance(logfile, basestring):
+def log(stream, logfile=None):
+    if not logfile:
+        logstream = sys.stderr
+        do_close = False
+    elif isinstance(logfile, basestring):
         logstream = open(logfile, 'wb')
         do_close = True
     else:
