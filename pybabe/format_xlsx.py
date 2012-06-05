@@ -4,7 +4,10 @@ from base import StreamHeader, BabeBase, StreamFooter
 def valuenormalize(cell):
     "Build the row value out of a cell"
     if cell.number_format == '0': 
-        return int(cell.internal_value)
+        try: 
+            return int(cell.internal_value)
+        except:
+            return cell.internal_value
     else: 
         return cell.internal_value
 
@@ -29,7 +32,7 @@ def write(format, metainfo, instream, outfile, encoding, **kwargs):
     ws.append(metainfo.fields)
     for k in instream:
         if isinstance(k, StreamFooter):
-            break
+            continue
         else:
             ws.append(list(k))
     wb.save(outfile)
