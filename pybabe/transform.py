@@ -75,7 +75,6 @@ def bulkMapTo(stream, function, bulk_size, insert_fields = None, fields = None):
             result =  function(buf)
             if insert_fields:
                 for i, r in enumerate(result):
-                    print i,r
                     yield header.t._make((buf[i] + tuple(r)))
             else:
                 for r in result:
