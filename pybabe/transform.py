@@ -24,10 +24,10 @@ def mapTo(stream, function, insert_fields = None, fields = None, typename = None
                 yield row 
             else:
                 res = function(row)
-                if isinstance(res, list):
-                    yield metainfo.t._make(list(row) + res)
+                if isinstance(res, list) or isinstance(res, tuple):
+                    yield metainfo.t._make(row + tuple(res))
                 else:
-                    yield metainfo.t._make(list(row) + [res])
+                    yield metainfo.t._make(row + (res,))
     elif fields:
         metainfo = None
         for row in stream:
