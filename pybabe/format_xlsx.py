@@ -22,7 +22,11 @@ def read(format, stream,  kwargs):
     metainfo = StreamHeader(**dict(kwargs, fields=fields))
     yield metainfo
     for row in it: # it brings a new method: iter_rows()
-        yield metainfo.t._make(map(valuenormalize, row))
+        ## stop at the first row with "none"
+        nrow = map(valuenormalize, row)
+        if not any(nrow):
+            break 
+        yield metainfo.t._make(nrow)
     yield StreamFooter()
 
 def write(format, metainfo, instream, outfile, encoding, **kwargs):
@@ -32,7 +36,7 @@ def write(format, metainfo, instream, outfile, encoding, **kwargs):
     ws.append(metainfo.fields)
     for k in instream:
         if isinstance(k, StreamFooter):
-            continue
+            break
         else:
             ws.append(list(k))
     wb.save(outfile)
