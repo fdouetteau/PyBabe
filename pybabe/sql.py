@@ -6,6 +6,7 @@ from subprocess import Popen, PIPE
 import time
 from string import Template
 from charset import UnicodeCSVWriter
+from charset import UTF8Recoder, UTF8RecoderWithCleanup
 
 PULL_DB = { 
     'mysql' : 
@@ -80,6 +81,8 @@ def pull_sql(false_stream, query=None, table=None, host=None, database_kind=None
     command : Override the connection command string prefix
     """
 
+
+    ignore_bad_lines = kwargs.get('ignore_bad_lines', False)
     # Existing iterator go first. 
     if hasattr(false_stream, 'stream') and false_stream.stream:
         for row in false_stream:
@@ -118,7 +121,15 @@ def pull_sql(false_stream, query=None, table=None, host=None, database_kind=None
     p.stdin.flush()
     p.stdin.close()
     dialect = sql_dialect()
-    reader = csv.reader(readstream if readstream else p.stdout, dialect=dialect)        
+
+    stream = readstream if readstream else p.stdout
+    #if kwargs.get('utf8_cleanup', False): 
+    #    stream = UTF8RecoderWithCleanup(stream, kwargs.get('encoding', 'utf-8'))
+    #elif codecs.getreader(kwargs.get('encoding', 'utf-8'))  != codecs.getreader('utf-8'):
+    #    stream = UTF8Recoder(stream, kwargs.get('encoding', None))
+    #else:
+    #    pass
+    reader = csv.reader(stream, dialect=dialect)        
     fields = reader.next()
     if database_kind ==  'vectorwise': 
         fields[-1] = fields[-1][:-1]
@@ -130,7 +141,13 @@ def pull_sql(false_stream, query=None, table=None, host=None, database_kind=None
                 print 'Error, empty row: %s ' % row
                 continue
             row[-1] = row[-1][:-1]
-        yield metainfo.t._make([unicode(x, 'utf-8') for x in row])
+        try: 
+            yield metainfo.t._make([unicode(x, 'utf-8') for x in row])
+        except UnicodeDecodeError: 
+            if ignore_bad_lines: 
+                print "Error on line ", x 
+            else:
+                raise
     p.wait()
     if p.returncode != 0: 
         raise Exception("SQL process failed with errcode %u" % p.returncode)
