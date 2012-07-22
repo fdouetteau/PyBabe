@@ -147,6 +147,20 @@ def flatMap(stream, function, insert_columns = None, columns = None, name = None
 
 BabeBase.register("flatMap", flatMap)
 
+def skip(stream, n):
+    """Skip the first n row""" 
+    for row in stream: 
+        if isinstance(row, StreamHeader): 
+            count = 0 
+            yield row 
+        elif isinstance(row, StreamFooter): 
+            yield row
+        else: 
+            if count >= n:
+                yield row
+            count = count + 1
+
+BabeBase.register('skip', skip)
       
 def head(stream, n, all_streams = False):
     """Retrieve only the first n lines. 
