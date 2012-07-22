@@ -9,7 +9,6 @@ gic = None
 def get_gic(): 
     global gic 
     if gic == None: 
-        from pygeoip import GeoIP
         if os.path.exists('/usr/share/GeoIP/GeoIP.dat'): 
             default = "/usr/share/GeoIP/GeoIP.dat"
         elif os.path.exists("/usr/local/share/GeoIP/GeoLiteCity.dat"):
@@ -19,6 +18,7 @@ def get_gic():
         else:
             default = None
         filename = BabeBase.get_config_with_env('geoip', 'GEOIP_FILE', {}, default)
+        from pygeoip import GeoIP
         gic = GeoIP(filename)
     return gic 
 
