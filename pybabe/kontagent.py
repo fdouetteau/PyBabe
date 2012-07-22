@@ -125,7 +125,9 @@ def process_file(base_date, f, discard_names):
 						st1 = srefs[2]
 			if source_ip:
 				try:
-					st2 = gic.country_code_by_addr(source_ip)
+					st2 = gic.country_code_by_addr(params.get('ip', source_ip))
+					if st2:
+						st2 = st2.upper()
 				except :
 					pass
 			st3 = params.get('scheme', None)
