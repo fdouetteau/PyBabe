@@ -4,7 +4,7 @@ from pytz import timezone
 from base import StreamMeta, StreamHeader, BabeBase
 import re
 
-time_formats = ['%H:%M:%S', '%H:%M', '%I:%M%p', '%H', '%I%p', '%I%p%M']
+time_formats = ['%H:%M:%S', '%H:%M', '%H:%M:%S.%f', '%I:%M%p', '%H', '%I%p', '%I%p%M']
 
 
 # Date possible format by order of precedence
