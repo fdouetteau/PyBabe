@@ -30,9 +30,11 @@ def partition(stream, field):
 	for row in stream: 
 		if isinstance(row, StreamHeader): 
 			beginning = True
-			header = row
-			 
+			header = row 
 		elif isinstance(row, StreamFooter): 
+			if beginning == True:
+				beginning = False
+				continue  ## Empty partition: Emit neither header nor footer
 			yield row 
 		else:
 			v = getattr(row, field)
