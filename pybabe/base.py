@@ -349,7 +349,10 @@ def pull(babe, **kwargs):
 
     if 'protocol' in kwargs:
         instream = BabeBase.pullProtocols[kwargs['protocol']](filename, **kwargs)
-        to_close.append(instream)
+        if isinstance(instream, list): 
+            to_close.extend(instream)
+        else:
+            to_close.append(instream)
     # Open File
     elif stream:
         instream = stream
@@ -365,37 +368,44 @@ def pull(babe, **kwargs):
     else:
         raise Exception("No input stream provided")  
 
+    if isinstance(instream, list):
+        instreams = instream
+    else:
+        instreams = [instream]
+
+    for instream in instreams:
+        if (compress_format and BabeBase.pullCompressFormatsNeedSeek[compress_format])  or (format and BabeBase.pullFormatsNeedSeek[format]):
+            if not hasattr(instream, 'seek'): 
+                ## Create a temporary file
+                tf = tempfile.NamedTemporaryFile()
+                shutil.copyfileobj(instream, tf)
+                tf.flush()
+                tf.seek(0)
+                instream = tf
+                to_close.append(instream)
 
 
-    if (compress_format and BabeBase.pullCompressFormatsNeedSeek[compress_format])  or (format and BabeBase.pullFormatsNeedSeek[format]):
-        if not hasattr(instream, 'seek'): 
-            ## Create a temporary file
-            tf = tempfile.NamedTemporaryFile()
-            shutil.copyfileobj(instream, tf)
-            tf.flush()
-            tf.seek(0)
-            instream = tf
+        if compress_format:
+            (content_list, uncompress) = BabeBase.pullCompressFormats[compress_format]
+            (compress_handle, namelist) = content_list(instream, filename)
+            if len(namelist) > 1:
+                raise Exception("Too many file in archive. Only archive with one file supported")
+            filename = namelist[0]
+            (_, f) = guess_format(None, format, filename)
+            instream = uncompress(compress_handle, filename)
             to_close.append(instream)
+        else:
+            f = format 
+            
 
-    if compress_format:
-        (content_list, uncompress) = BabeBase.pullCompressFormats[compress_format]
-        (compress_handle, namelist) = content_list(instream, filename)
-        if len(namelist) > 1:
-            raise Exception("Too many file in archive. Only archive with one file supported")
-        filename = namelist[0]
-        (compress_format, format) = guess_format(None, format, filename)
-        instream = uncompress(compress_handle, filename)
-        to_close.append(instream)
-        
+        ## Parse high level 
+        i = BabeBase.pullFormats[f](format=fileExtension, stream=instream, kwargs=kwargs)
 
-    ## Parse high level 
-    i = BabeBase.pullFormats[format](format=fileExtension, stream=instream, kwargs=kwargs)
-
-    #count = 0
-    for r in i: 
-        #if count % 100000 == 1: 
-        #    print 'Processed %u lines' % count  
-        yield r 
+        #count = 0
+        for r in i: 
+            #if count % 100000 == 1: 
+            #    print 'Processed %u lines' % count  
+            yield r 
         
     if command:
         p.wait()

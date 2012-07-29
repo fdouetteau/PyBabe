@@ -19,23 +19,21 @@ def push(filename_topush, filename_remote, **kwargs):
     k.key = filename_remote
     k.set_contents_from_filename(filename_topush)
 
-def get_key(bucket, filename):
+def get_keys(bucket, filename):
     if filename.find('?') >= 0 or filename.find('*') >= 0:
         comp = filename.rsplit('/', 1)
         p  = comp[0] + '/' if len(comp) > 1 else ''
         pattern = comp[1] if len(comp) > 1 else comp[0]
-        match = None
-        for k in bucket.list(p):
-            if fnmatch.fnmatch(k.name[len(p):], pattern):
-                if match:
-                    raise Exception("Multiple key matching pattern %s : %s and %s ", (filename, k.name, match.name))
-                match = k
-        if match:
-            return match
-        else: 
+        keys = [k for k in bucket.list(p) if fnmatch.fnmatch(k.name[len(p):], pattern)]
+        if len(keys) == 0:
             raise Exception("No key matching pattern %s " % filename)
+        return keys
     else:
-        return bucket.get_key(filename)
+        b = bucket.get_key(filename)
+        if b:
+            return [b]
+        else:
+            raise Exception("File not found %s" % filename)
 
 class ReadLineWrapper(object):
     "Overrride next to enumerate 'lines' instead of bytes "
@@ -78,19 +76,20 @@ def pull(filename_remote, **kwargs):
         cache_dir = BabeBase.get_config("s3", "cache_dir", default=default_cache_dir)
         if not os.path.exists(cache_dir):
             os.makedirs(cache_dir)
-    key = get_key(bucket, filename_remote)
-    if not key: 
-        raise Exception('Filename %s does not exist on %s' % (filename_remote, str(bucket))) 
-    if cache: 
-        f = os.path.join(cache_dir, os.path.basename(key.name) + "-" + key.etag.replace('"', ''))
-        if os.path.exists(f): 
-            return open(f, "r")
+    keys = get_keys(bucket, filename_remote)
+    files = []
+    for key in keys:
+        if cache: 
+            f = os.path.join(cache_dir, os.path.basename(key.name) + "-" + key.etag.replace('"', ''))
+            if os.path.exists(f): 
+                files.append(open(f, "r"))
+            else:
+                key.get_contents_to_filename(f + ".tmp")
+                os.rename(f + ".tmp", f)
+                files.append(open(f, "r"))
         else:
-            key.get_contents_to_filename(f + ".tmp")
-            os.rename(f + ".tmp", f)
-            return open(f, "r")
-    else:
-        return ReadLineWrapper(key)
+            files.append(ReadLineWrapper(key))
+    return files
 
 BabeBase.addProtocolPushPlugin('s3', push, None)
 BabeBase.addProtocolPullPlugin('s3', pull)
