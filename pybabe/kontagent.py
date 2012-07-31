@@ -230,6 +230,8 @@ def pull_kontagent(nostream, start_time, end_time, sample_mode=False, discard_na
 		url = get_url(hour, kt_user, kt_pass, kt_appid)
 		log.info("Kontagent: retrieving list: %s" % url)
 		s = urllib.urlopen(url).read()
+		if s == "No files available": 
+			continue
 		file_urls = json.loads(s)
 		if sample_mode and len(file_urls) > 0: # Sample mode: just process the first file. 
 			file_urls = file_urls[:1]
