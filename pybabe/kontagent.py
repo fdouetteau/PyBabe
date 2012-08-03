@@ -105,8 +105,19 @@ def process_file(base_date, f, discard_names):
 		channel_type = params.get('tu', None)
 		value = params.get('v', None)
 		level = params.get('l', None)
-		recipients = params.get('r', None) 
-		tracking_tag = params.get('u', None)
+		recipients = params.get('r', None)
+		if msgtype != "pgr": 
+			tracking_tag = params.get('u', None)
+		else:
+			tracking_tag = None
+			source_url = params.get('u', None)
+			if source_url:
+				try:
+					for k, v in cgi.parse_qs(source_url).items():
+						params[k] = v[0]
+				except Exception, e:
+					print e
+					pass
 		data = params.get('data', None)
 		if not name: 
 			name = msgtype 
@@ -132,7 +143,7 @@ def process_file(base_date, f, discard_names):
 					pass
 			st3 = params.get('scheme', None)
 		if msgtype == "apa" or msgtype == "pgr": 
-			for k in ["fbx_type", "fbx_ref", "ref", "fb_source"]: 
+			for k in ["fbx_type", "fb_source","fbx_ref",   "ref"]: 
 				if not channel_type: 
 					channel_type = params.get(k, None)
 				else: 
