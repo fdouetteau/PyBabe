@@ -5,6 +5,7 @@ import fnmatch
 import os
 import logging
 
+
 def get_bucket(kwargs):
     from boto.s3.connection import S3Connection
     key_id = BabeBase.get_config_with_env('s3', 'AWS_ACCESS_KEY_ID', kwargs)
@@ -73,7 +74,7 @@ def pull(filename_remote, **kwargs):
     bucket = get_bucket(kwargs)
     cache = BabeBase.get_config("s3", "cache", default=False)
     if cache: 
-        default_cache_dir = "/tmp/pybabe-s3-cache-%s" % os.getlogin() 
+        default_cache_dir = "/tmp/pybabe-s3-cache-%s" % os.getenv('USER')
         cache_dir = BabeBase.get_config("s3", "cache_dir", default=default_cache_dir)
         if not os.path.exists(cache_dir):
             os.makedirs(cache_dir)
