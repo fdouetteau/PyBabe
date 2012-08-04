@@ -7,6 +7,7 @@ import time
 from string import Template
 from charset import UnicodeCSVWriter
 from charset import UTF8Recoder, UTF8RecoderWithCleanup
+import sys
 
 PULL_DB = { 
     'mysql' : 
@@ -131,9 +132,18 @@ def pull_sql(false_stream, query=None, table=None, host=None, database_kind=None
     #    pass
     reader = csv.reader(stream, dialect=dialect)        
     fields = reader.next()
+    ## Vectorwise specifics ...
+    ## Remove the last characeter (space on the l)
     if database_kind ==  'vectorwise': 
         fields[-1] = fields[-1][:-1]
+        if fields[0].startswith("E_"):
+            print >>sys.stderr, ' '.join(fields)
+            for line in stream:
+                print >>sys.stderr, line.rstrip()
+            raise Exception("Error in SQL Command")
     metainfo = StreamHeader(**dict(kwargs, typename=table, fields=fields))
+
+
     yield metainfo
     for row in reader:
         if database_kind ==  'vectorwise':
