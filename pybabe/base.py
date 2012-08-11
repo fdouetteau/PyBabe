@@ -45,14 +45,15 @@ class StreamHeader(StreamMeta):
         self.source = source
         self.typename = typename
         self.fields = fields
+        self.normalized_fields = map(StreamHeader.keynormalize, self.fields)
         self.partition = partition
         self.primary_key = primary_key
         self.description = description
         if not self.typename and source: 
             self.typename = StreamHeader.keynormalize(source)
         if not self.typename:
-            self.typename = '_'.join(map(StreamHeader.keynormalize, self.fields))
-        self.t = t if t else namedtuple(self.typename, map(StreamHeader.keynormalize, self.fields))
+            self.typename = '_'.join(self.normalized_fields)
+        self.t = t if t else namedtuple(self.typename, self.normalized_fields)
 
     ## Some state to be define for metainfo pickling. 
 

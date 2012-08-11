@@ -46,12 +46,14 @@ def pivot(stream, pivot, group):
 	groups = OrderedDefaultdict(dict)
 	pivot_values = OrderedSet()
 	header = None
+	group_n = map(StreamHeader.keynormalize, group)
 	for row in stream:
 		if isinstance(row, StreamHeader): 
 			header = row
 		elif isinstance(row, StreamFooter):
 			# HEADER IS : GROUP + (OTHER FIELDS * EACH VALUE
 			other_fields =  [f for f in header.fields if not f in group and not f == pivot]
+			other_fields_k = map(StreamHeader.keynormalize, other_fields)
 			fields = group + [f + "-" + str(v) 
 				for v in pivot_values.list for f in other_fields]					
 			newheader = header.replace(fields=fields) 
@@ -59,18 +61,18 @@ def pivot(stream, pivot, group):
 			for _, row_dict in groups.iteritems(): 
 				## Create a line per group
 				mrow = row_dict.itervalues().next()
-				group_cols = [getattr(mrow, col) for col in group]
+				group_cols = [getattr(mrow, col) for col in group_n]
 				for v in pivot_values:
 					if v in row_dict:
 						mrow = row_dict[v]
-						group_cols.extend([getattr(mrow, col) for col in other_fields])
+						group_cols.extend([getattr(mrow, col) for col in other_fields_k])
 					else:
 						group_cols.extend([None for col in other_fields])
 				yield group_cols
 			yield row 
 		else:
 			kgroup = ""
-			for f in group:
+			for f in group_n:
 				kgroup = kgroup + str(getattr(row, f))
 			groups[kgroup][getattr(row, pivot)] = row
 			pivot_values.add(getattr(row, pivot))

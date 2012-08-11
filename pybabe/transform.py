@@ -233,7 +233,7 @@ def filterColumns(stream, typename=None, remove_fields=None, keep_fields=None):
             if keep_fields:
                 fields= keep_fields
             else:
-                fields = [name for name in row.fields if not name in remove_fields] 
+                fields = [name for name in row.normalized_fields if not name in remove_fields] 
             metainfo = row.replace(typename=typename, fields=fields)
             yield metainfo
         elif isinstance(row, StreamMeta):
