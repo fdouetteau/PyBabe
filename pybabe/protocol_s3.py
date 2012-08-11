@@ -21,6 +21,13 @@ def push(filename_topush, filename_remote, **kwargs):
     k.key = filename_remote
     k.set_contents_from_filename(filename_topush)
 
+def check_exists(filename_remote, ** kwargs):
+    bucket = get_bucket(kwargs)
+    from boto.s3.key import Key
+    k = Key(bucket)
+    k.key = filename_remote
+    return k.exists()
+
 def get_keys(bucket, filename):
     if filename.find('?') >= 0 or filename.find('*') >= 0:
         comp = filename.rsplit('/', 1)
@@ -94,5 +101,5 @@ def pull(filename_remote, **kwargs):
             files.append(ReadLineWrapper(key))
     return files
 
-BabeBase.addProtocolPushPlugin('s3', push, None)
+BabeBase.addProtocolPushPlugin('s3', push, None, check_exists)
 BabeBase.addProtocolPullPlugin('s3', pull)

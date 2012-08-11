@@ -285,8 +285,8 @@ class BabeBase(object):
             cls.pullCompressExtensions[s] = format
             
     @classmethod
-    def addProtocolPushPlugin(cls, protocol, m, early_check):
-        cls.pushProtocols[protocol] = (early_check, m)  
+    def addProtocolPushPlugin(cls, protocol, m, early_check, check_exists=None):
+        cls.pushProtocols[protocol] = (early_check, m, check_exists)  
         
     @classmethod
     def addProtocolPullPlugin(cls, protocol, m):
@@ -464,6 +464,13 @@ def push(instream, filename=None, filename_template = None, directory = None, st
         if early_check:
             early_check(**kwargs)
 
+    if filename: 
+        if protocol and kwargs.get("ignore_if_exists", False):
+            check_exists = BabeBase.pushProtocols[protocol][2]
+            if check_exists:
+                if check_exists(filename, **kwargs):
+                    logging.info("Skipping push for existing file %s" %  filename)
+                    return 
 
     it = iter(instream)
     while True:
