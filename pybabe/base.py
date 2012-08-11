@@ -301,6 +301,11 @@ class BabeBase(object):
         }
         return d.get(format, ('application','octet-stream'))
 
+    def to_string(self): 
+        buf = StringIO()
+        self.push(stream=buf, format="csv")
+        return buf.getvalue()
+
     
 def get_extension(filename):
     if not filename:
@@ -425,6 +430,7 @@ def split_ext(filename):
 
 def to_list(instream):
     return list(filter(lambda x : not isinstance(x, StreamMeta), instream))
+
 
 def push(instream, filename=None, filename_template = None, directory = None, stream = None, format=None, encoding=None, protocol=None, compress=None, stream_dict=None, **kwargs):
     outstream = None
