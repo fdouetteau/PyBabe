@@ -28,21 +28,23 @@ def check_exists(filename_remote, ** kwargs):
     k.key = filename_remote
     return k.exists()
 
-def get_keys(bucket, filename):
+def get_keys(bucket, filename, fail_on_empty):
     if filename.find('?') >= 0 or filename.find('*') >= 0:
         comp = filename.rsplit('/', 1)
         p  = comp[0] + '/' if len(comp) > 1 else ''
         pattern = comp[1] if len(comp) > 1 else comp[0]
         keys = [k for k in bucket.list(p) if fnmatch.fnmatch(k.name[len(p):], pattern)]
-        if len(keys) == 0:
+        if fail_on_empty and len(keys) == 0:
             raise Exception("No key matching pattern %s " % filename)
         return keys
     else:
         b = bucket.get_key(filename)
         if b:
             return [b]
-        else:
+        elif fail_on_empty:
             raise Exception("File not found %s" % filename)
+        else:
+            return []
 
 class ReadLineWrapper(object):
     "Overrride next to enumerate 'lines' instead of bytes "
@@ -80,12 +82,13 @@ class ReadLineWrapper(object):
 def pull(filename_remote, **kwargs):
     bucket = get_bucket(kwargs)
     cache = BabeBase.get_config("s3", "cache", default=False)
+    fail_on_empty = kwargs.get("fail_on_empty", True)
     if cache: 
         default_cache_dir = "/tmp/pybabe-s3-cache-%s" % os.getenv('USER')
         cache_dir = BabeBase.get_config("s3", "cache_dir", default=default_cache_dir)
         if not os.path.exists(cache_dir):
             os.makedirs(cache_dir)
-    keys = get_keys(bucket, filename_remote)
+    keys = get_keys(bucket, filename_remote, fail_on_empty=fail_on_empty)
     files = []
     for key in keys:
         logging.info("S3 Load: %s", key)
