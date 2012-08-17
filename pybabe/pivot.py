@@ -1,5 +1,10 @@
 
-from collections import OrderedDict
+try:
+	from collections import OrderedDict
+except:
+	## 2.6 Fallback 
+	from ordereddict import OrderedDict
+
 from base import StreamHeader, StreamFooter, BabeBase
 
 class OrderedDefaultdict(OrderedDict):
