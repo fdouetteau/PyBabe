@@ -54,7 +54,7 @@ def pull(format, stream,kwargs):
     delimiter = kwargs.get('delimiter', None)
         
     sniff_read = stream.next()
-    stream = PrefixReader(sniff_read, stream)
+    stream = PrefixReader(sniff_read, stream, linefilter=kwargs.get("linefilter", None))
     dialect = csv.Sniffer().sniff(sniff_read)
     if sniff_read.endswith('\r\n'):
         dialect.lineterminator = '\r\n'

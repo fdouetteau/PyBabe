@@ -35,13 +35,20 @@ class UTF8RecoderWithCleanup(UTF8Recoder):
         return tu.encode('utf-8')
         
 class PrefixReader(object):
-    def __init__(self, prefix, stream):
+    def __init__(self, prefix, stream, linefilter):
         self.prefix = prefix
         self.stream = stream
+        self.linefilter = linefilter
     def __iter__(self):
         yield self.prefix
-        for k in self.stream:
-            yield k 
+        linefilter = self.linefilter
+        if linefilter:
+            for k in self.stream:
+                if linefilter(k):
+                    yield k
+        else:
+            for k in self.stream:
+                yield k 
 
 def write_value(s):
     if isinstance(s, unicode):
