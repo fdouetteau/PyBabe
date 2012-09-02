@@ -125,7 +125,7 @@ class BabeBase(object):
     pullCompressFormatsNeedSeek = PluginDict("pybabe.compress_")
     pullCompressExtensions = PluginDict("pybabe.compress_")
     pullProtocols = PluginDict("pybabe.protocol_")
-    operations = PluginDict("pybabe.operation_")
+    operations = PluginDict("pybabe.")
     config = None
 
     ON_ERROR_FAIL = "FAIL"

@@ -46,6 +46,8 @@ class PluginDict(object):
 			raise AttributeError 
 
 	def __contains__(self, key):
+		if key is None:
+			return False
 		if key in self.dict: 
 			return True
 		if self.load_module(key): 
