@@ -1,5 +1,5 @@
 
-from base import BabeBase, StreamHeader, StreamFooter
+from pybabe import Babe, StreamHeader, StreamFooter
 import datetime
 from timeparse import parse_date, parse_datetime
 import json
@@ -226,17 +226,17 @@ def pull_kontagent(nostream, start_time, end_time, sample_mode=False, discard_na
 	KT_FILECACHE : local copy of kontagent files. 
 	Version 1.1
 	"""
-	referent_timezone = BabeBase.get_config_with_env("kontagent", "timezone", kwargs, "utc")
-	kt_user = BabeBase.get_config_with_env("kontagent", "KT_USER", kwargs)
-	kt_pass = BabeBase.get_config_with_env("kontagent", "KT_PASS", kwargs)
-	kt_filecache = BabeBase.get_config_with_env(section='kontagent', key='KT_FILECACHE')
+	referent_timezone = Babe.get_config_with_env("kontagent", "timezone", kwargs, "utc")
+	kt_user = Babe.get_config_with_env("kontagent", "KT_USER", kwargs)
+	kt_pass = Babe.get_config_with_env("kontagent", "KT_PASS", kwargs)
+	kt_filecache = Babe.get_config_with_env(section='kontagent', key='KT_FILECACHE')
 	if discard_names:
 		discard_names = set(discard_names)
 	else: 
 		discard_names = set()
 	if not os.path.exists(kt_filecache):
 		os.makedirs(kt_filecache)
-	kt_appid = BabeBase.get_config_with_env("kontagent", "KT_APPID", kwargs)
+	kt_appid = Babe.get_config_with_env("kontagent", "KT_APPID", kwargs)
 	for hour in enumerate_period_per_hour(start_time, end_time, referent_timezone): 
 		url = get_url(hour, kt_user, kt_pass, kt_appid)
 		log.info("Kontagent: retrieving list: %s" % url)
@@ -259,4 +259,4 @@ def pull_kontagent(nostream, start_time, end_time, sample_mode=False, discard_na
 			gzip.wait()
 		yield StreamFooter()
 
-BabeBase.register("pull_kontagent", pull_kontagent)
+Babe.register("pull_kontagent", pull_kontagent)

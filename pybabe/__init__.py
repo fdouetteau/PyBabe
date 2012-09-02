@@ -1,5 +1,5 @@
 
-from base import BabeBase
+from base import BabeBase, StreamHeader, StreamFooter, StreamMeta
 
 # Load all builtin plugins
 import transform, mapreduce, types, babelog
@@ -14,7 +14,9 @@ only_to_load_1 = [transform, mapreduce, types, babelog,
     partition, geo, useragent, join]
         
 Babe = BabeBase
-
+StreamHeader = StreamHeader
+StreamFooter = StreamFooter
+StreamMeta = StreamMeta
 
 
 
