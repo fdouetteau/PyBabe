@@ -22,5 +22,19 @@ C,E,7,8,4,5
 		s3= Babe().pull(stream=StringIO(s), format="csv").pivot(pivot="c", group=["a", "b"]).to_string()
 		self.assertEquals(s3, s2)
 
+	def test_unpivot(self):
+		s = """name,firstname,Jan,Feb
+Dou,Flo,3,5
+Doe,John,7,8
+"""
+		s2 = """name,firstname,date,value
+Dou,Flo,Jan,3
+Dou,Flo,Feb,5
+Doe,John,Jan,7
+Doe,John,Feb,8
+"""
+		s3 = Babe().pull(stream=StringIO(s), format="csv").unpivot(common_fields=['name', 'firstname'], unpivot_name_field="date", unpivot_value_field="value").to_string()
+		self.assertEquals(s3,s2)
+
 if __name__ == "__main__":
 	main()
