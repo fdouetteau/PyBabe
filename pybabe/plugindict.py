@@ -7,22 +7,32 @@ class PluginDict(object):
 		self.inerror = set()
 		self.dict = dict()
 
-	def module_name(self, key):
-		return "%s%s" % (self.prefix, key)
+	def module_names(self, key):
+		m1 =  "%s%s" % (self.prefix, key)
+		l = key.split("_")
+		if len(l) > 1:
+			return [m1, "%s%s" % (self.prefix, l[-1])]
+		else:
+			return [m1]
 
 	def load_module(self, key):
-		module = self.module_name(key)
-		if module in self.inerror:
-			return False
-		try: 
-			__import__(module)
-			logging.info("Loaded plugin module %s" % module) 
-		except ImportError:
-			self.inerror.add(module)
-			return False
-		return True 
+		modules = self.module_names(key)
+		ok = False
+		for module in modules:
+			if module in self.inerror:
+				continue
+			try: 
+				__import__(module)
+				ok = True
+				break
+				logging.info("Loaded plugin module %s" % module) 
+			except ImportError:
+				self.inerror.add(module)
+		return ok
 
 	def __setitem__(self, key, v): 
+		if key is None:
+			return 
 		self.dict.__setitem__(key, v)
 
 	def __getitem__(self, key, v=None):
