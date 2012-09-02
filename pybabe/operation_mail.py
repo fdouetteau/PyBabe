@@ -12,7 +12,7 @@ from cStringIO import StringIO
 
 COMMASPACE = ', '
 
-def sendmail(stream, subject, recipients, in_body=False, in_body_row_limit=None, attach_formats = "csv", **kwargs):
+def mail(stream, subject, recipients, in_body=False, in_body_row_limit=None, attach_formats = "csv", **kwargs):
     """Format a stream in a mail and send it. 
     Recipients: list of recipients mail addresses
     in_body: format (in HTML & text) the content
@@ -84,4 +84,4 @@ def sendmail(stream, subject, recipients, in_body=False, in_body_row_limit=None,
     s.quit()
 
 
-BabeBase.registerFinalMethod('sendmail', sendmail)
+BabeBase.registerFinalMethod('mail', mail)

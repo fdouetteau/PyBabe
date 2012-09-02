@@ -12,6 +12,7 @@ from string import Template
 from cStringIO import StringIO
 import logging 
 import itertools
+from plugindict import PluginDict 
 
 try:
     from collections import OrderedDict
@@ -112,18 +113,19 @@ error_log = logging.getLogger("babe_errors")
 
 class BabeBase(object):
 
-    pullFormats = {}
-    pullFormatsNeedSeek = {}
-    pushFormats = {}
-    pullExtensions = {}
-    pushExtensions = {}
-    pushCompressFormats = {}
-    pushCompressExtensions = {}
-    pushProtocols = {}
-    pullCompressFormats = {}
-    pullCompressFormatsNeedSeek = {}
-    pullCompressExtensions = {}
-    pullProtocols = {}
+    pullFormats = PluginDict("pybabe.format_")
+    pullFormatsNeedSeek = PluginDict("pybabe.format_")
+    pushFormats = PluginDict("pybabe.format_")
+    pullExtensions = PluginDict("pybabe.format_")
+    pushExtensions = PluginDict("pybabe.format_")
+    pushCompressFormats = PluginDict("pybabe.compress_")
+    pushCompressExtensions = PluginDict("pybabe.compress_")
+    pushProtocols = PluginDict("pybabe.protocol_")
+    pullCompressFormats = PluginDict("pybabe.compress_")
+    pullCompressFormatsNeedSeek = PluginDict("pybabe.compress_")
+    pullCompressExtensions = PluginDict("pybabe.compress_")
+    pullProtocols = PluginDict("pybabe.protocol_")
+    operations = PluginDict("pybabe.operation_")
     config = None
 
     ON_ERROR_FAIL = "FAIL"
@@ -249,18 +251,39 @@ class BabeBase(object):
         else: 
             return self.m(self.stream, *self.v, **self.d)
 
+    def get_iterator(self, stream, m, v, d):
+        b = BabeBase()
+        b.stream = stream
+        b.m = m
+        b.v = v 
+        b.d = d 
+        return b
+
     @classmethod
     def register(cls, name, m):
+        """A register a flow method """
         # will return an iterator
         f = lambda self, *args, **kwargs : self.get_iterator(self, m, args, kwargs)
-        setattr(cls, name, f)  
-        
+        cls.operations[name] = f
+        setattr(cls, name, f) ### We have to bind the method as a direct attribute to bind it as a method 
+
     @classmethod
     def registerFinalMethod(cls, name, m):
+        """Register a final method (that do not return a flow) """
+        cls.operations[name] = m
         setattr(cls, name, m)
+        assert(name in cls.__dict__)
+
+    def __getattr__(self, name):
+        if name in self.__class__.operations:
+            return getattr(self, name)
+        else:
+            raise AttributeError("Unknown method %s" % name)
+        
         
     @classmethod
     def addPullPlugin(cls, format, supportedExtensions, m, need_seek=False):
+        """Add a new supported file extension for pull """
         cls.pullFormats[format] = m
         cls.pullFormatsNeedSeek[format] = need_seek
         for s in supportedExtensions:
@@ -293,6 +316,7 @@ class BabeBase(object):
     def addProtocolPullPlugin(cls, protocol, m):
         cls.pullProtocols[protocol] = m
 
+
     @classmethod
     def getMimeType(cls, format): 
         d = { 
@@ -322,17 +346,16 @@ def guess_format(compress_format, format, filename):
     if compress_format:
         return (compress_format, format)
     ext = get_extension(filename)
-    if ext in BabeBase.pullCompressExtensions:
+    if ext in BabeBase.pullCompressExtensions: 
         return (BabeBase.pullCompressExtensions[ext], format)
     if format:
-        if not format in BabeBase.pullFormats:
+        if not format in BabeBase.pullFormats: 
             raise Exception("Unsupported format %s" % format)
         return (None, format) 
     if ext in BabeBase.pullExtensions:
         return (compress_format, BabeBase.pullExtensions[ext])
     raise Exception("Unable to guess extension %s for filename %s" % (ext, filename))
     
-
 
 def pull(babe, **kwargs):
     fileExtension = None
@@ -539,7 +562,6 @@ def push(instream, filename=None, filename_template = None, directory = None, st
 
 BabeBase.registerFinalMethod('push', push)
 BabeBase.registerFinalMethod('to_list', to_list)
-
 
 
 

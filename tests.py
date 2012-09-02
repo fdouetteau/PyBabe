@@ -2,7 +2,6 @@
 
 from pybabe import Babe
 from pybabe.base import StreamHeader
-import unittest
 import random
 from cStringIO import StringIO
 from pyftpdlib import ftpserver
@@ -12,7 +11,10 @@ import BaseHTTPServer, urllib2
 from tempfile import NamedTemporaryFile
 import os
 import socket 
-from unittest2 import TestCase, skipUnless, main
+try: 
+    from unittest import TestCase, skipUnless, main
+except: 
+    from unittest2 import TestCase, skipUnless, main
 
 def can_connect_to_the_net(): 
     try:
@@ -29,6 +31,13 @@ def can_execute(s):
         p.wait()
         return True
     except OSError:
+        return False
+
+def can_connect(host, port): 
+    try: 
+        socket.create_connection((host, port), timeout=1)
+        return True 
+    except Exception:
         return False
 
 
@@ -267,7 +276,7 @@ class TestHTTP(TestCase):
     def tearDown(self):
         self.thread.keep_running = False
         try:
-            k = urllib2.urlopen("http://localhost:%u/STOP" % self.port)
+            k = urllib2.urlopen("http://localhost:%u/STOP" % self.port, timeout=2)
             k.read()
         except Exception:
             pass
@@ -323,8 +332,8 @@ class TestMapTo(TestCase):
         buf = StringIO()
         a.push(stream=buf, format='csv')
         s = """foo,bar,f,d
-2,2,3.2,2010-10-02
-4,4,1.2,2011-02-02
+2,2,3.2,2010/10/02
+4,4,1.2,2011/02/02
 """
         self.assertEquals(buf.getvalue(), s) 
     
@@ -344,8 +353,8 @@ class TestMapTo(TestCase):
         buf = StringIO()
         a.push(stream=buf, format='csv')
         s = """foo,bar,f,d,fooplus
-1,2,3.2,2010-10-02,2
-3,4,1.2,2011-02-02,4
+1,2,3.2,2010/10/02,2
+3,4,1.2,2011/02/02,4
 """
         self.assertEquals(buf.getvalue(), s)
    
@@ -461,11 +470,15 @@ class TestTwitter(TestCase):
 class TestMongo(TestCase):
     s1 = 'rown,f,s\n1,4.3,coucou\n2,4.2,salut\n'
     s2 = 'rown,f,s\n1,4.3,coucou2\n2,4.2,salut2\n'
+
+    @skipUnless(can_connect("localhost", 27017), "Requires Mongo localhost instance running")
     def test_push(self):
         a  = Babe().pull(stream=StringIO(self.s1), format='csv', primary_key='rown')
         a = a.typedetect()
         a.push_mongo(db='pybabe_test',collection='test_push')
 
+
+    @skipUnless(can_connect("localhost", 27017), "Requires Mongo localhost instance running")
     def test_pushpull(self):
         a  = Babe().pull(stream=StringIO(self.s2), format='csv', primary_key='rown')
         a = a.typedetect()
@@ -553,7 +566,8 @@ class TestBuzzData(TestCase):
     @skipUnless(Babe.has_config('buzzdata', 'api_key'), 'Requires Buzzdata api Key')
     def test_buzzdata(self):
         a = Babe().pull(protocol='buzzdata', 
-                dataset='best-city-contest-worldwide-cost-of-living-index',
+                dataroom='best-city-contest-worldwide-cost-of-living-index',
+                uuid='aINAPyLGur4y37yAyCM7w3', 
                  username='eiu', format='xls')
         a = a.head(2)
         buf = StringIO()
@@ -782,7 +796,7 @@ class TestMAIL(TestCase):
     def test_mail(self):
         a = Babe().pull(stream=StringIO(self.s1), source="Table 1", format='csv')
         a = a.pull(stream=StringIO(self.s2), source="Table 2", format='csv')
-        a.sendmail(subject="Test", recipients="florian@douetteau.net", in_body=True)
+        a.mail(subject="Test", recipients="florian@douetteau.net", in_body=True)
 
 import code, traceback, signal
 

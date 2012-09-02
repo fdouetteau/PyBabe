@@ -1,6 +1,6 @@
 
 from pybabe import Babe
-from unittest import TestCase
+from unittest import TestCase, main
 from cStringIO import StringIO
 
 
@@ -21,3 +21,6 @@ C,E,7,8,4,5
 """
 		s3= Babe().pull(stream=StringIO(s), format="csv").pivot(pivot="c", group=["a", "b"]).to_string()
 		self.assertEquals(s3, s2)
+
+if __name__ == "__main__":
+	main()
