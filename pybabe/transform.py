@@ -291,7 +291,8 @@ def filter_by_regexp(stream, field, regexp):
         if isinstance(row, StreamMeta): 
             yield row
         else: 
-            if pat.match(getattr(row, field)):
+            v = getattr(row, field)
+            if v and pat.match(v):
                 yield row 
 
 BabeBase.register("filter_by_regexp", filter_by_regexp)
