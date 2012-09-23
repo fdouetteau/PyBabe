@@ -1,29 +1,29 @@
 
-import time, datetime
+import time
+import datetime
 from pytz import timezone
 from base import StreamMeta, StreamHeader, BabeBase
 import re
 
 time_formats = ['%H:%M:%S', '%H:%M:%S.%f', '%H:%M',  '%I:%M%p', '%H', '%I%p', '%I%p%M']
 
-
 # Date possible format by order of precedence
-date_formats = ['%Y %m %d','%d %m %Y']
+date_formats = ['%Y %m %d', '%d %m %Y']
 
 ##  '%d %B %Y', '%B %d %Y',
 ##                                                  '%d %b %Y', '%b %d %Y',
  ##                         '%d %m %y', '%y %m %d', '%d %B %y', '%B %d %y',
  ##                                                 '%d %b %y', '%b %d %y']
-    
-date_time_formats = [ d  + ' ' + t for t in time_formats for d in date_formats]
-    
-    
+date_time_formats = [d + ' ' + t for t in time_formats for d in date_formats]
+
+
 def parse_date(string):
     string = string.strip()
-    if not string: return None
-    
-    string = string.replace('/',' ').replace('-',' ').replace(',',' ')
-    
+    if not string:
+        return None
+
+    string = string.replace('/', ' ').replace('-', ' ').replace(',', ' ')
+
     for format in date_formats:
         try:
             result = time.strptime(string, format)
@@ -32,16 +32,18 @@ def parse_date(string):
             pass
 
     raise ValueError()
-    
+
 pat = r"[-/,]"
 pattern = re.compile(pat)
 
+
 def parse_datetime(string):
     string = string.strip()
-    if not string: return None
-    
+    if not string:
+        return None
+
     string = pattern.sub(' ', string)
-    
+
     for format in date_time_formats:
         try:
             result = time.strptime(string, format)
@@ -65,10 +67,10 @@ def stream_parse_datetime(stream, field, input_timezone, output_timezone, output
                 header = row
             yield header
         elif isinstance(row, StreamMeta):
-            yield row 
-        else: 
-            try: 
-                time_value  = input_tz.localize(parse_datetime(getattr(row, field)))
+            yield row
+        else:
+            try:
+                time_value = input_tz.localize(parse_datetime(getattr(row, field)))
                 time_value_ext = time_value.astimezone(output_tz)
                 d = row._asdict()
                 if output_time:
@@ -79,7 +81,7 @@ def stream_parse_datetime(stream, field, input_timezone, output_timezone, output
                 if output_hour:
                     d[output_hour] = time_value_ext.hour
                 yield header.t(**d)
-            except Exception, e: 
+            except Exception, e:
                 if on_error == BabeBase.ON_ERROR_WARN:
                     BabeBase.log_warn("parse_time", row, e)
                 elif on_error == BabeBase.ON_ERROR_FAIL:
@@ -88,8 +90,8 @@ def stream_parse_datetime(stream, field, input_timezone, output_timezone, output
                     pass
                 elif on_error == BabeBase.ON_ERROR_NONE:
                     d = row._asdict()
-                    for k in [output_time, output_date, output_hour]: 
-                        if k: 
+                    for k in [output_time, output_date, output_hour]:
+                        if k:
                             d[k] = None
                     yield header.t(**d)
 

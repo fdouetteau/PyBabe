@@ -1,29 +1,29 @@
 
 from base import BabeBase, StreamHeader, StreamMeta
-import os 
+import os
 
 
 gic = None
 
 
-def get_gic(): 
-    global gic 
-    if gic == None: 
-        if os.path.exists('/usr/share/GeoIP/GeoIP.dat'): 
+def get_gic():
+    global gic
+    if gic == None:
+        if os.path.exists('/usr/share/GeoIP/GeoIP.dat'):
             default = "/usr/share/GeoIP/GeoIP.dat"
         elif os.path.exists("/usr/local/share/GeoIP/GeoLiteCity.dat"):
             default = "/usr/local/share/GeoIP/GeoLiteCity.dat"
         elif os.path.exists("/usr/local/var/lib/GeoLiteCity.dat"):
-            default = "/usr/local/var/lib/GeoLiteCity.dat" 
+            default = "/usr/local/var/lib/GeoLiteCity.dat"
         else:
             default = None
         filename = BabeBase.get_config_with_env('geoip', 'GEOIP_FILE', {}, default)
         from pygeoip import GeoIP
         gic = GeoIP(filename)
-    return gic 
+    return gic
 
 
-def geoip_country_code(stream, field="ip", country_code="country_code", ignore_error=False, geoip_file = None): 
+def geoip_country_code(stream, field="ip", country_code="country_code", ignore_error=False, geoip_file=None):
     """"
 Add a 'country_code' field from IP address in field "IP"
     """
@@ -31,12 +31,12 @@ Add a 'country_code' field from IP address in field "IP"
     for r in stream:
         if isinstance(r, StreamHeader):
             header = r.insert(typename=None, fields=[country_code])
-            yield header 
+            yield header
         elif isinstance(r, StreamMeta):
             yield r
         else:
             ip = getattr(r, field)
-            try: 
+            try:
                 cc = gic.country_code_by_addr(ip)
             except Exception, e:
                 if ignore_error:
@@ -47,7 +47,4 @@ Add a 'country_code' field from IP address in field "IP"
             yield header.t(*(r + (cc,)))
 
 ## TODO : full region parsing
-
 BabeBase.register("geoip_country_code", geoip_country_code)
-
-

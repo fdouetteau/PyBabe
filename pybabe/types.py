@@ -1,19 +1,22 @@
 
-import re, itertools
+import re
+import itertools
 from base import StreamHeader, BabeBase, StreamMeta
 from timeparse import parse_date, parse_datetime
 from collections import deque
 
-patterns = [r'(?P<int>-?[0-9]+)', 
+patterns = [r'(?P<int>-?[0-9]+)',
      r'(?P<float>-?[0-9]+\.[0-9]+)',
-     r'(?P<date>\d{2,4}/\d\d/\d\d|\d\d/\d\d/\d\d{2,4})', 
+     r'(?P<date>\d{2,4}/\d\d/\d\d|\d\d/\d\d/\d\d{2,4})',
      r'(?P<datetime>\d\d/\d\d/\d\d{2,4} \d{2}:\d{2})'
     ]
-         
+
 pattern = re.compile('(' + '|'.join(patterns) + ')$')
+
 
 def typedetect(stream, fields=None):
     return itertools.imap(lambda elt: typefilter(elt, fields), stream)
+
 
 def typefilter(elt, fields):
     if isinstance(elt, StreamMeta):
@@ -26,16 +29,16 @@ def typefilter(elt, fields):
             if not isinstance(v, basestring):
                 continue
             g = pattern.match(v)
-            if g: 
+            if g:
                 if g.group('int'):
                     d[t] = int(v)
                 elif g.group('float'):
                     d[t] = float(v)
             else:
-                try: 
+                try:
                     d[t] = parse_datetime(v)
-                except ValueError: 
-                    try: 
+                except ValueError:
+                    try:
                         d[t] = parse_date(v)
                     except ValueError:
                         pass
@@ -46,15 +49,15 @@ def typefilter(elt, fields):
 BabeBase.register("typedetect", typedetect)
 
 
-def primary_key_detect(stream, max=None): 
+def primary_key_detect(stream, max=None):
     d = deque()
     it = iter(stream)
     for linecount, row in enumerate(it):
         d.append(row)
-        if isinstance(row,StreamHeader): 
+        if isinstance(row, StreamHeader):
             metainfo = row
             values = [set() for k in metainfo.fields]
-            keys = set(xrange(0,len(metainfo.fields)))
+            keys = set(xrange(0, len(metainfo.fields)))
         elif isinstance(row, StreamMeta):
             pass
         else:
@@ -72,7 +75,7 @@ def primary_key_detect(stream, max=None):
         metainfo.primary_key = metainfo.fields[list(keys)[0]]
         #print "Detected primary key %s" % str(metainfo.primary_keys)
     elif len(keys) == 0:
-        pass # print 'no primary key'
+        pass  # print 'no primary key'
     else:
         metainfo.primary_key = metainfo.fields[min(keys)]
         #  print "Assumed primary key %s" % str(metainfo.primary_keys)
@@ -82,7 +85,3 @@ def primary_key_detect(stream, max=None):
         yield row
 
 BabeBase.register('primary_key_detect', primary_key_detect)
-
-
-             
-

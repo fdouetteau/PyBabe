@@ -1,6 +1,6 @@
 
 import os
-import heapq
+
 
 class FileCache(object):
     "Manage a file-based cache, with direction"
@@ -33,4 +33,4 @@ class FileCache(object):
                 last_modified = file_stat.st_last_modified
                 global_size += file_size
         if global_size > self.size_limit:
-
+            pass

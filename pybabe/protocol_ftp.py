@@ -2,6 +2,7 @@
 from base import BabeBase
 import urllib
 
+
 def push(filename_topush, filename_remote, **kwargs):
     from ftplib import FTP
     ftp = FTP()
@@ -12,6 +13,7 @@ def push(filename_topush, filename_remote, **kwargs):
     f.close()
     ftp.quit()
 
+
 def early_check(**kwargs):
     from ftplib import FTP
     ftp = FTP()
@@ -19,11 +21,12 @@ def early_check(**kwargs):
     ftp.login(kwargs.get('user', None), kwargs.get('password', None))
     ftp.quit()
 
+
 def pull(filename_remote, **kwargs):
-    host =  kwargs['host']
+    host = kwargs['host']
     if 'port' in kwargs:
         host = host + ':' + str(kwargs['port'])
-    if 'user' in kwargs: 
+    if 'user' in kwargs:
         host = kwargs['user'] + ':' + kwargs['password'] + '@' + host
     return urllib.urlopen('ftp://%s/%s' % (host, filename_remote))
 

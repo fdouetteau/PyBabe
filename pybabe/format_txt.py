@@ -2,17 +2,19 @@
 import codecs
 from base import StreamHeader, BabeBase, StreamFooter
 
-def pull(format, stream, kwargs):    
+
+def pull(format, stream, kwargs):
     stream = codecs.getreader(kwargs.get('encoding', 'utf8'))(stream)
 
     fields = kwargs.get('fields', ['text'])
-    
+
     metainfo = StreamHeader(**dict(kwargs, fields=fields))
-    yield metainfo 
-    
+    yield metainfo
+
     for line in stream:
         yield metainfo.t._make([line])
     yield StreamFooter()
+
 
 def push(format, metainfo, instream, outfile, encoding, **kwargs):
     outstream = codecs.getwriter(kwargs.get('encoding', 'utf8'))(outfile)
@@ -20,7 +22,7 @@ def push(format, metainfo, instream, outfile, encoding, **kwargs):
         if isinstance(row, StreamFooter):
             break
         else:
-            for cell in row: 
+            for cell in row:
                 outstream.write(cell)
     outstream.flush()
 

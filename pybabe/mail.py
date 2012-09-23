@@ -12,13 +12,14 @@ from cStringIO import StringIO
 
 COMMASPACE = ', '
 
-def mail(stream, subject, recipients, in_body=False, in_body_row_limit=None, attach_formats = "csv", **kwargs):
-    """Format a stream in a mail and send it. 
+
+def mail(stream, subject, recipients, in_body=False, in_body_row_limit=None, attach_formats="csv", **kwargs):
+    """Format a stream in a mail and send it.
     Recipients: list of recipients mail addresses
     in_body: format (in HTML & text) the content
-    in_body_row_limit : maximum number of line in body 
-    attach_format : file format to use for attachment 
-    """ 
+    in_body_row_limit : maximum number of line in body
+    attach_format : file format to use for attachment
+    """
 
     smtp_server = BabeBase.get_config('smtp', 'server', kwargs)
     smtp_port = BabeBase.get_config('smtp', 'port', kwargs)
@@ -28,7 +29,7 @@ def mail(stream, subject, recipients, in_body=False, in_body_row_limit=None, att
     author = BabeBase.get_config('smtp', 'author', kwargs)
 
     formats = []
-    if in_body: 
+    if in_body:
         formats.append("html")
     if attach_formats:
         if isinstance(attach_formats, basestring):
@@ -36,12 +37,11 @@ def mail(stream, subject, recipients, in_body=False, in_body_row_limit=None, att
         else:
             formats.extend(attach_formats)
     if isinstance(recipients, basestring):
-        recipients  = [recipients]
+        recipients = [recipients]
 
     babes = stream.tee(len(formats))
-    if in_body and in_body_row_limit: 
+    if in_body and in_body_row_limit:
         babes[0] = babes[0].head(in_body_row_limit, all_streams=True)
-
 
     buffer_dicts = []
     for format, babe in izip(formats, babes):
@@ -55,16 +55,16 @@ def mail(stream, subject, recipients, in_body=False, in_body_row_limit=None, att
     msg['To'] = ', '.join(recipients)
 
     for format, d in buffer_dicts:
-        if format == "html": 
+        if format == "html":
             buf = StringIO()
             buf.write('<html><body>\n')
             for filename in d:
                 buf.write(d[filename].getvalue())
                 buf.write('\n')
             buf.write('\n</body></html>')
-            att = MIMEText(buf.getvalue(),"html")
+            att = MIMEText(buf.getvalue(), "html")
             msg.attach(att)
-        else: 
+        else:
             for filename in d:
                 c = d[filename].getvalue()
                 (maintype, subtype) = BabeBase.getMimeType(format)
@@ -73,7 +73,7 @@ def mail(stream, subject, recipients, in_body=False, in_body_row_limit=None, att
                 encoders.encode_base64(att)
                 att.add_header('Content-Disposition', 'attachment', filename=filename + "." + format)
                 msg.attach(att)
-            
+
     s = smtplib.SMTP(smtp_server, smtp_port)
     s.ehlo()
     if smtp_tls:

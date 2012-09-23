@@ -1,6 +1,7 @@
 
 from base import StreamHeader, BabeBase, StreamMeta
-import csv,sys
+import csv
+import sys
 
 
 class log_dialect(csv.Dialect):
@@ -10,6 +11,7 @@ class log_dialect(csv.Dialect):
     escapechar = '\\'
     quoting = csv.QUOTE_MINIMAL
     quotechar = '"'
+
 
 def log(stream, logfile=None):
     if not logfile:
@@ -31,6 +33,7 @@ def log(stream, logfile=None):
             writer.writerow(list(row))
         yield row
     if do_close:
-       logstream.close()
-       
+        logstream.close()
+
+
 BabeBase.register("log", log)

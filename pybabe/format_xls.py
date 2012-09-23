@@ -2,8 +2,10 @@
 
 from base import StreamHeader, BabeBase, StreamFooter
 
+
 def valuenormalize(cell):
-    return cell.value 
+    return cell.value
+
 
 def read(format, stream, kwargs):
     import xlrd
@@ -11,11 +13,11 @@ def read(format, stream, kwargs):
     ws = wb.sheet_by_index(0)
     nrows = ws.nrows
     fields = kwargs.get('fields', None)
-    if not fields: 
-        b = 1 
-        fields = [cell.value for cell in ws.row(0)] 
-    else: 
-        b = 0 
+    if not fields:
+        b = 1
+        fields = [cell.value for cell in ws.row(0)]
+    else:
+        b = 0
     metainfo = StreamHeader(**dict(kwargs, fields=fields))
     yield metainfo
     for i in xrange(b, nrows):

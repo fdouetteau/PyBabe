@@ -10,9 +10,9 @@ import ConfigParser
 import cPickle
 from string import Template
 from cStringIO import StringIO
-import logging 
+import logging
 import itertools
-from plugindict import PluginDict 
+from plugindict import PluginDict
 
 try:
     from collections import OrderedDict
@@ -20,6 +20,7 @@ try:
 except ImportError:
     from ordereddict import OrderedDict
     ordered_dict = OrderedDict
+
 
 def my_import(name):
     mod = __import__(name)
@@ -30,7 +31,7 @@ def my_import(name):
 
 
 
-class StreamMeta(object): 
+class StreamMeta(object):
     pass
 
 class StreamHeader(StreamMeta):

@@ -1,7 +1,7 @@
 
 from base import BabeBase
 from cStringIO import StringIO
-import fnmatch 
+import fnmatch
 import os
 import logging
 
@@ -12,8 +12,9 @@ def get_bucket(kwargs):
     access_key = BabeBase.get_config_with_env('s3', 'AWS_SECRET_ACCESS_KEY', kwargs)
     conn = S3Connection(key_id, access_key)
     bucket = conn.get_bucket(kwargs['bucket'])
-    return bucket 
-    
+    return bucket
+
+
 def push(filename_topush, filename_remote, **kwargs):
     bucket = get_bucket(kwargs)
     from boto.s3.key import Key
@@ -21,12 +22,14 @@ def push(filename_topush, filename_remote, **kwargs):
     k.key = filename_remote
     k.set_contents_from_filename(filename_topush)
 
+
 def check_exists(filename_remote, ** kwargs):
     bucket = get_bucket(kwargs)
     from boto.s3.key import Key
     k = Key(bucket)
     k.key = filename_remote
     return k.exists()
+
 
 def get_keys(bucket, filename, fail_on_empty):
     if filename.find('?') >= 0 or filename.find('*') >= 0:
@@ -53,10 +56,10 @@ class ReadLineWrapper(object):
         self.it = self.doiter()
     def __iter__(self):
         return self.it
-        
+
     def next(self):
         return self.it.next()
-        
+
     def doiter(self):
         remaining = None
         for bytes in self.obj:
@@ -72,18 +75,19 @@ class ReadLineWrapper(object):
                     remaining = line
         if remaining:
             yield remaining
-            
+
     def read(self, size=0):
         return self.obj.read(size)
-        
+
     def close(self):
         self.obj.close()
-        
+
+
 def pull(filename_remote, **kwargs):
     bucket = get_bucket(kwargs)
     cache = BabeBase.get_config("s3", "cache", default=False)
     fail_on_empty = kwargs.get("fail_on_empty", True)
-    if cache: 
+    if cache:
         default_cache_dir = "/tmp/pybabe-s3-cache-%s" % os.getenv('USER')
         cache_dir = BabeBase.get_config("s3", "cache_dir", default=default_cache_dir)
         if not os.path.exists(cache_dir):
@@ -92,9 +96,9 @@ def pull(filename_remote, **kwargs):
     files = []
     for key in keys:
         logging.info("S3 Load: %s", key)
-        if cache: 
+        if cache:
             f = os.path.join(cache_dir, os.path.basename(key.name) + "-" + key.etag.replace('"', ''))
-            if os.path.exists(f): 
+            if os.path.exists(f):
                 files.append(open(f, "r"))
             else:
                 key.get_contents_to_filename(f + ".tmp")

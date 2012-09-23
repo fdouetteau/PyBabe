@@ -7,7 +7,7 @@ from base import BabeBase, StreamHeader, StreamFooter
 # page located at https://dev.twitter.com/apps (under "OAuth settings")
 
 # The access tokens can be found on your applications's Details
-# page located at https://dev.twitter.com/apps (located 
+# page located at https://dev.twitter.com/apps (located
 # under "Your access token")
 
 
@@ -19,8 +19,9 @@ def flatten_status(u):
                 continue
             setattr(u, "%s_%s" % (p, k),  getattr(v, k))
     hashtags = u.entities["hashtags"]
-    u.hashtags =  [entity['text'] for entity in hashtags]
-    
+    u.hashtags = [entity['text'] for entity in hashtags]
+
+
 def build_status_names(u):
     names = u.__dict__.keys()
     names.sort()
@@ -31,22 +32,24 @@ def build_status_names(u):
             pass
     return names
 
-def pull_twitter(false_stream, consumer_key=None,consumer_secret=None,access_token=None,access_token_secret=None):
+
+def pull_twitter(false_stream, consumer_key=None,
+    consumer_secret=None, access_token=None, access_token_secret=None):
     import tweepy
-    
+
     if consumer_key:
         auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
         auth.set_access_token(access_token, access_token_secret)
         api = tweepy.API(auth)
     else:
-        api =  tweepy.API()
-    
+        api = tweepy.API()
+
     # If the authentication was successful, you should
     # see the name of the account print out
     #print api.me().name
 
     # If the application settings are set for "Read and Write" then
-    # this line should tweet out the message to your account's 
+    # this line should tweet out the message to your account's
     # timeline. The "Read and Write" setting is on https://dev.twitter.com/apps
     #api.update_status('Updating using OAuth authentication via Tweepy!')
     metainfo = None

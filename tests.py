@@ -6,51 +6,53 @@ import random
 from cStringIO import StringIO
 from pyftpdlib import ftpserver
 from threading import Thread
-import shutil, tempfile
-import BaseHTTPServer, urllib2
+import shutil
+import tempfile
+import BaseHTTPServer
+import urllib2
 from tempfile import NamedTemporaryFile
 import os
-import socket 
-try: 
+import socket
+try:
     from unittest import TestCase, skipUnless, main
-except: 
+except:
     from unittest2 import TestCase, skipUnless, main
 
-def can_connect_to_the_net(): 
+def can_connect_to_the_net():
     try:
         socket.gethostbyname('www.google.com')
         return True
-    except Exception: 
+    except Exception:
         return False
 
 def can_execute(s):
     try:
         from subprocess import Popen, PIPE
-        p = Popen([s], stdin=PIPE, stdout=PIPE, stderr=PIPE) 
+        p = Popen([s], stdin=PIPE, stdout=PIPE, stderr=PIPE)
         p.stdin.close()
         p.wait()
         return True
     except OSError:
         return False
 
-def can_connect(host, port): 
-    try: 
+def can_connect(host, port):
+    try:
         socket.create_connection((host, port), timeout=1)
-        return True 
+        return True
     except Exception:
         return False
 
 
 class TestBasicFunction(TestCase):
-        
+
     def test_keynormalize(self):
         self.assertEqual('Payant_Gratuit', StreamHeader.keynormalize('Payant/Gratuit'))
-    
+
     def test_pull_process(self):
         babe = Babe()
         a = babe.pull(command=['/bin/ls', '-1', '.'], source='ls', fields=['filename'], format="csv", encoding='utf8')
         a.push(filename='tests/ls.csv')
-        
+
     def test_log(self):
         buf = StringIO()
         buf2 = StringIO()
@@ -64,7 +66,7 @@ class TestBasicFunction(TestCase):
 """
         self.assertEqual(s, buf.getvalue())
         self.assertEqual(s, buf2.getvalue())
-        
+
 
 class TestMultiPull(TestCase):
     s = "a,b\n1,2\n3,4\n"
@@ -84,9 +86,9 @@ class TestMultiPull(TestCase):
         a.push(stream=buf, format='csv')
         self.assertEquals(buf.getvalue(), self.s2)
 
-        
+
 test_csv_content = """foo,bar,f,d\n1,2,3.2,2010/10/02\n3,4,1.2,2011/02/02\n"""
-        
+
 class TestZip(TestCase):
     s = "a,b\n1,2\n3,4\n"
     def test_zip(self):
@@ -98,11 +100,11 @@ class TestZip(TestCase):
         b.push(stream=buf)
         self.assertEquals(buf.getvalue(), self.s)
 
-        
+
     def test_zipread(self):
         babe = Babe()
         a = babe.pull(filename='tests/test_read.zip', name="Test")
-        buf = StringIO() 
+        buf = StringIO()
         a.push(stream=buf, format='csv')
         self.assertEquals(buf.getvalue(), test_csv_content)
 
@@ -115,7 +117,7 @@ class TestGZ(TestCase):
         buf = StringIO()
         b.push(stream=buf, format='csv')
         self.assertEquals(buf.getvalue(), self.s)
-        
+
 class TestFTP(TestCase):
     def setUp(self):
         self.port = random.choice(range(9000,11000))
@@ -128,24 +130,24 @@ class TestFTP(TestCase):
         authorizer.add_user(self.user, self.password, self.dir, perm='elradfmw')
         address = ('127.0.0.1', self.port)
         ftp_handler = ftpserver.FTPHandler
-        ftp_handler.authorizer = authorizer 
+        ftp_handler.authorizer = authorizer
         self.ftpd = ftpserver.FTPServer(address, ftp_handler)
         class RunServer(Thread):
             def run(self):
                 try:
                     self.ftpd.serve_forever()
-                except Exception: 
+                except Exception:
                     pass
         s = RunServer()
         s.ftpd = self.ftpd
         s.start()
- 
-        
+
+
     def tearDown(self):
         self.ftpd.close_all()
         if self.dir.startswith('/tmp'):
             shutil.rmtree(self.dir)
-    
+
     def test_ftp(self):
         babe = Babe()
         a = babe.pull(filename='tests/test.csv', name='Test')
@@ -154,19 +156,19 @@ class TestFTP(TestCase):
         buf = StringIO()
         b.push(stream=buf, format='csv')
         self.assertEquals(buf.getvalue(), test_csv_content)
-        
+
     def test_ftpzip(self):
         babe = Babe()
         a = babe.pull(filename='tests/test.csv', name='Test')
         a.push(filename='test.csv', compress='test.zip', protocol='ftp', user=self.user, password=self.password, host='localhost', port=self.port, protocol_early_check=False)
-        
-        
+
+
 class TestCharset(TestCase):
     def test_writeutf16(self):
         babe = Babe()
         a = babe.pull(filename='tests/test.csv', name='Test')
         a.push(filename='tests/test_utf16.csv', encoding='utf_16')
-        
+
     def test_cleanup(self):
         babe = Babe()
         a = babe.pull(filename='tests/test_badencoded.csv', utf8_cleanup=True, name='Test')
@@ -178,7 +180,7 @@ class TestCharset(TestCase):
         a = babe.pull(filename='tests/test_badencoded.csv', name='Test')
         a.push(filename='tests/test_badencoded_out2.csv')
 
-class TestSort(TestCase): 
+class TestSort(TestCase):
     def test_sort(self):
         babe = Babe()
         s = '\n'.join(['k,v'] + [ '%u,%u' % (i,-i) for i in xrange(0,100001)])
@@ -188,7 +190,7 @@ class TestSort(TestCase):
         a = a.head(n=1)
         buf = StringIO()
         a = a.push(stream=buf, format='csv')
-        self.assertEquals(buf.getvalue(), 'k,v\n100000,-100000\n')        
+        self.assertEquals(buf.getvalue(), 'k,v\n100000,-100000\n')
 
     def test_sortdiskbased(self):
         babe = Babe()
@@ -199,16 +201,17 @@ class TestSort(TestCase):
         a = a.head(n=1)
         buf = StringIO()
         a = a.push(stream=buf, format='csv')
-        self.assertEquals(buf.getvalue(), 'k,v\n100000,-100000\n')        
+        self.assertEquals(buf.getvalue(), 'k,v\n100000,-100000\n')
 
-    
+
 class TestExcel(TestCase):
-    
+
     def test_excel_read_write(self):
         babe = Babe()
         b = babe.pull(filename='tests/test.xlsx', name='Test2').typedetect()
         b = b.mapTo(lambda row: row._replace(Foo=-row.Foo))
         b.push(filename='tests/test2.xlsx')
+
 
 class TestTransform(TestCase):
     def test_split(self):
@@ -228,7 +231,7 @@ class TestTransform(TestCase):
 """)
 
     s = 'city,b,c\nPARIS,foo,bar\nLONDON,coucou,salut\n'
-    s2 = 'field,PARIS,LONDON\nb,foo,coucou\nc,bar,salut\n' 
+    s2 = 'field,PARIS,LONDON\nb,foo,coucou\nc,bar,salut\n'
     def test_transpose(self):
         a = Babe().pull(stream=StringIO(self.s), format='csv', primary_key='city').transpose()
         buf = StringIO()
@@ -253,7 +256,7 @@ class TestHTTP(TestCase):
                 if self.path == "/STOP":
                     self.send_response(200)
                     self.end_headers()
-                    return 
+                    return
                 p = self.path.replace('/remote', 'tests')
                 ff = open(p, 'rb')
                 s = ff.read()
@@ -261,9 +264,11 @@ class TestHTTP(TestCase):
                 self.send_header('Content-type',	'text/csv')
                 self.end_headers()
                 self.wfile.write(s)
-                return 
+                return
+
             def log_request(self, code, size=None):
                 pass
+
         class RunServer(Thread):
             def run(self):
                 self.httpd = BaseHTTPServer.HTTPServer(server_address=server_address,  RequestHandlerClass=TestHandler)
@@ -272,7 +277,7 @@ class TestHTTP(TestCase):
         self.thread = RunServer()
         self.thread.keep_running = True
         self.thread.start()
-    
+
     def tearDown(self):
         self.thread.keep_running = False
         try:
@@ -282,12 +287,13 @@ class TestHTTP(TestCase):
             pass
         self.thread.join()
         self.thread = None
-    
+
     def test_http(self):
         a = Babe().pull(protocol='http', host='localhost', name='Test', filename='remote/test.csv', port=self.port)
         buf = StringIO()
         a.push(stream=buf, format='csv')
         self.assertEquals(buf.getvalue(), 'foo,bar,f,d\n1,2,3.2,2010/10/02\n3,4,1.2,2011/02/02\n')
+
 
 class TestS3(TestCase):
     @skipUnless(can_connect_to_the_net(), 'Requires net connection')
@@ -295,32 +301,31 @@ class TestS3(TestCase):
         s = "a,b\n1,2\n3,4\n"
         buf1 = StringIO(s)
         a = Babe().pull(stream=buf1, format='csv', name='Test')
-        a.push(filename='test3.csv', bucket='florian-test', protocol="s3") 
+        a.push(filename='test3.csv', bucket='florian-test', protocol="s3")
         b = Babe().pull(filename='test3.csv', name='Test', bucket='florian-test', protocol="s3")
-        buf = StringIO() 
+        buf = StringIO()
         b.push(stream=buf, format='csv')
         self.assertEquals(buf.getvalue(), s)
-
 
     @skipUnless(can_connect_to_the_net(), 'Requires net connection')
     def test_s3_glob(self):
         s = "a,b\n1,2\n3,4\n"
         buf1 = StringIO(s)
         a = Babe().pull(stream=buf1, format='csv', name='Test')
-        a.push(filename='test_glob_4.csv', bucket='florian-test', protocol="s3") 
+        a.push(filename='test_glob_4.csv', bucket='florian-test', protocol="s3")
         b = Babe().pull(filename='test_glob_?.csv', name='Test', bucket='florian-test', protocol="s3")
-        buf = StringIO() 
+        buf = StringIO()
         b.push(stream=buf, format='csv')
         self.assertEquals(buf.getvalue(), s)
-     
+
     @skipUnless(can_connect_to_the_net(), 'Requires net connection')
     def test_s3_glob2(self):
         s = "a,b\n1,2\n3,4\n"
         buf1 = StringIO(s)
         a = Babe().pull(stream=buf1, format='csv', name='Test')
-        a.push(filename='foofoobar/test_glob_4.csv', bucket='florian-test', protocol="s3") 
+        a.push(filename='foofoobar/test_glob_4.csv', bucket='florian-test', protocol="s3")
         b = Babe().pull(filename='foofoobar/test_glob_?.csv', name='Test', bucket='florian-test', protocol="s3")
-        buf = StringIO() 
+        buf = StringIO()
         b.push(stream=buf, format='csv')
         self.assertEquals(buf.getvalue(), s)
 
@@ -328,25 +333,26 @@ class TestS3(TestCase):
 class TestMapTo(TestCase):
     def test_tuple(self):
         a = Babe().pull(filename='tests/test.csv', name='Test').typedetect()
-        a = a.mapTo(lambda obj : obj._replace(foo=obj.foo + 1))
+        a = a.mapTo(lambda obj: obj._replace(foo=obj.foo + 1))
         buf = StringIO()
         a.push(stream=buf, format='csv')
         s = """foo,bar,f,d
 2,2,3.2,2010/10/02
 4,4,1.2,2011/02/02
 """
-        self.assertEquals(buf.getvalue(), s) 
-    
+        self.assertEquals(buf.getvalue(), s)
+
     s = "a\n1\n2\n3\n4\n"
     s2 = "a,b\n1,3\n2,3\n3,7\n4,7\n"
+
     def test_bulk(self):
         a = Babe().pull(stream=StringIO(self.s), format="csv")
-        a = a.typedetect() 
+        a = a.typedetect()
         a = a.bulkMapTo(lambda list: [[sum([r.a for r in list])]] * len(list), bulk_size=2, insert_fields=["b"])
         buf = StringIO()
         a.push(stream=buf, format="csv")
         self.assertEquals(buf.getvalue(), self.s2)
-        
+
     def test_insert(self):
         a = Babe().pull(filename='tests/test.csv', name='Test').typedetect()
         a = a.mapTo(lambda row : row.foo+1, insert_fields=['fooplus'])
@@ -357,7 +363,7 @@ class TestMapTo(TestCase):
 3,4,1.2,2011/02/02,4
 """
         self.assertEquals(buf.getvalue(), s)
-   
+
     def test_replace(self):
         a = Babe().pull(filename='tests/test.csv', name='Test').typedetect()
         a = a.mapTo(lambda row : [row.foo+1, row.bar*2], fields=['a','b'])
@@ -365,7 +371,8 @@ class TestMapTo(TestCase):
         a.push(stream=buf, format='csv')
         s = """a,b\n2,4\n4,8\n"""
         self.assertEquals(buf.getvalue(), s)
-        
+
+
 class TestFlatMap(TestCase):
     def test_tuple(self):
         a = Babe().pull(stream=StringIO("a,b\n1,2:3\n4,5:6\n"), format="csv")
@@ -374,6 +381,7 @@ class TestFlatMap(TestCase):
         a.push(stream=buf, format="csv")
         self.assertEquals(buf.getvalue(), "a,b\n1,2\n1,3\n4,5\n4,6\n")
 
+
 class TestGroup(TestCase):
     def test_groupby(self):
         a = Babe().pull(stream=StringIO('a,b\n1,2\n3,4\n1,4\n'), format="csv").typedetect()
@@ -381,14 +389,15 @@ class TestGroup(TestCase):
         buf = StringIO()
         a.push(stream=buf, format='csv')
         self.assertEquals(buf.getvalue(), "a,b\n1,6\n3,4\n")
-        
+
     def test_groupAll(self):
         a = Babe().pull(stream=StringIO('a,b\n1,2\n3,4\n1,4\n'), format="csv").typedetect()
         a = a.groupAll(reducer=lambda rows: (max([row.b for row in rows]),), fields=['max'])
         buf = StringIO()
         a.push(stream=buf, format="csv")
         self.assertEquals(buf.getvalue(), "max\n4\n")
-        
+
+
 class TestFilterColumns(TestCase):
     def test_filter(self):
         a = Babe().pull(stream=StringIO('a,b\n1,2\n3,4\n1,4\n'), format="csv").typedetect()
@@ -396,14 +405,15 @@ class TestFilterColumns(TestCase):
         buf = StringIO()
         a.push(stream=buf, format="csv")
         self.assertEquals(buf.getvalue(), "a\n1\n3\n1\n")
-    
+
     def test_filter2(self):
          a = Babe().pull(stream=StringIO('a,b\n1,2\n3,4\n1,4\n'), format="csv").typedetect()
          a = a.filterColumns(remove_fields=['a'])
          buf = StringIO()
          a.push(stream=buf, format="csv")
-         self.assertEquals(buf.getvalue(), "b\n2\n4\n4\n")    
-        
+         self.assertEquals(buf.getvalue(), "b\n2\n4\n4\n")
+
+
 class TestFilter(TestCase):
     def test_filter(self):
         a = Babe().pull(stream=StringIO('a,b\n1,2\n3,4\n1,4\n'), format="csv").typedetect()
@@ -426,6 +436,7 @@ class TestFilter(TestCase):
     #    a.push(stream=buf, format='csv')
     #    self.assertEquals(buf.getvalue(), "a,b,sum\n1,2,\n1,4,\n,,6\n3,4,\n,,4\n")
 
+
 class TestMinMax(TestCase):
     def test_max(self):
         a = Babe().pull(stream=StringIO('a,b\n1,2\n3,4\n1,4\n'), format="csv").typedetect()
@@ -433,14 +444,15 @@ class TestMinMax(TestCase):
         buf = StringIO()
         a.push(stream=buf, format='csv')
         self.assertEquals(buf.getvalue(), 'a,b\n3,4\n1,4\n')
-        
+
     def test_min(self):
         a = Babe().pull(stream=StringIO('a,b\n1,2\n3,4\n1,4\n'), format="csv").typedetect()
         a = a.minN(column='a', n=2)
         buf = StringIO()
         a.push(stream=buf, format='csv')
         self.assertEquals(buf.getvalue(), 'a,b\n1,2\n1,4\n')
-        
+
+
 class TestRename(TestCase):
     def test_rename(self):
         a = Babe().pull(stream=StringIO('a,b\n1,2\n3,4\n1,4\n'), format="csv").typedetect()
@@ -449,14 +461,16 @@ class TestRename(TestCase):
         a.push(stream=buf, format='csv')
         self.assertEquals(buf.getvalue(), 'c,b\n1,2\n3,4\n1,4\n')
 
+
 class TestWindowMap(TestCase):
     def test_windowMap(self):
         a = Babe().pull(stream=StringIO('a\n1\n2\n3\n4\n5\n6\n7\n'), format="csv").typedetect()
-        a = a.windowMap(3, lambda rows : rows[-1]._make([sum([row.a for row in rows])]))
+        a = a.windowMap(3, lambda rows: rows[-1]._make([sum([row.a for row in rows])]))
         buf = StringIO()
         a.push(stream=buf, format='csv')
         self.assertEquals(buf.getvalue(), 'a\n1\n3\n6\n9\n12\n15\n18\n')
-        
+
+
 class TestTwitter(TestCase):
     @skipUnless(can_connect_to_the_net(), 'Requires net connection')
     def test_twitter(self):
@@ -466,7 +480,7 @@ class TestTwitter(TestCase):
         a = a.typedetect()
         buf = StringIO()
         a.push(stream=buf, format='csv')
-    
+
 class TestMongo(TestCase):
     s1 = 'rown,f,s\n1,4.3,coucou\n2,4.2,salut\n'
     s2 = 'rown,f,s\n1,4.3,coucou2\n2,4.2,salut2\n'
@@ -486,7 +500,7 @@ class TestMongo(TestCase):
         b = Babe().pull_mongo(db="pybabe_test", fields=['rown', 'f', 's'], collection='test_pushpull')
         buf = StringIO()
         b.push(stream=buf, format='csv')
-        self.assertEquals(buf.getvalue(), self.s2)      
+        self.assertEquals(buf.getvalue(), self.s2)
 
 class TestDedup(TestCase):
     s = 'id,value,s\n1,coucou,4\n2,blabla,5\n3,coucou,6\n4,tutu,4\n'
@@ -501,7 +515,7 @@ class TestDedup(TestCase):
         a.push(stream=buf,format="csv")
         self.assertEquals(buf.getvalue(), self.s)
 
-    def test_dedup2(self): 
+    def test_dedup2(self):
         a = Babe().pull(stream=StringIO(self.s2), format="csv")
         a = a.dedup()
         buf = StringIO()
@@ -536,21 +550,21 @@ class TestPrimaryKey(TestCase):
     def test_primarykey(self):
         a = Babe().pull(stream=StringIO(self.s), format='csv')
         a = a.primary_key_detect()
-        buf = StringIO() 
+        buf = StringIO()
         a.push(stream=buf, format='csv')
         self.assertEquals(buf.getvalue(), self.s)
 
     def test_primarykey2(self):
         a = Babe().pull(stream=StringIO(self.s2), format='csv')
         a = a.primary_key_detect()
-        buf = StringIO() 
+        buf = StringIO()
         a.push(stream=buf, format='csv')
-        self.assertEquals(buf.getvalue(), self.s2)        
+        self.assertEquals(buf.getvalue(), self.s2)
 
     def test_primarykey3(self):
         a = Babe().pull(stream=StringIO(self.s3), format='csv')
         a = a.primary_key_detect()
-        buf = StringIO() 
+        buf = StringIO()
         a.push(stream=buf, format='csv')
         self.assertEquals(buf.getvalue(), self.s3)
 
@@ -558,16 +572,16 @@ class TestPrimaryKey(TestCase):
         a = Babe().pull(filename='data/airports.csv')
         a = a.primary_key_detect()
         a = a.head(n=10)
-        buf = StringIO() 
+        buf = StringIO()
         a.push(stream=buf, format='csv')
 
 class TestBuzzData(TestCase):
     @skipUnless(can_connect_to_the_net(), 'Requires net connection')
     @skipUnless(Babe.has_config('buzzdata', 'api_key'), 'Requires Buzzdata api Key')
     def test_buzzdata(self):
-        a = Babe().pull(protocol='buzzdata', 
+        a = Babe().pull(protocol='buzzdata',
                 dataroom='best-city-contest-worldwide-cost-of-living-index',
-                uuid='aINAPyLGur4y37yAyCM7w3', 
+                uuid='aINAPyLGur4y37yAyCM7w3',
                  username='eiu', format='xls')
         a = a.head(2)
         buf = StringIO()
@@ -624,7 +638,7 @@ class TestSQL(TestCase):
         b.push(stream=buf, format='csv', delimiter=',')
         self.assertEquals(buf.getvalue(), self.s)
 
-    # createdb pybabe_test # required before 
+    # createdb pybabe_test # required before
     @skipUnless(can_execute('vwload'),  "Requires Vectorwise client")
     def test_vectorwise(self):
         a = Babe().pull(stream=StringIO(self.s), format='csv')
@@ -696,7 +710,7 @@ class TestKontagent(TestCase):
 class TestGeo(TestCase):
     s = "name,ip\nFlo,82.231.177.189\nFla,4.3.1.432\n"
     s2 = "name,ip,country_code\nFlo,82.231.177.189,FR\nFla,4.3.1.432,US\n"
-    def test_country_code(self): 
+    def test_country_code(self):
         a = Babe().pull(stream=StringIO(self.s), format='csv')
         a = a.geoip_country_code()
         buf = StringIO()
@@ -739,7 +753,7 @@ class TestSQLDump(TestCase):
 INSERT INTO `foobar` VALUES (11,435787,'Yes\\r\\nI\\\'m good.','2011-07-03 12:15:44'),(13,242393,'Foo','Bar');
 MORE BLABLA;
 """
-    
+
     s2= """id,number,title,datetime
 11,435787,"Yes\r
 I'm good.",2011-07-03 12:15:44
@@ -747,7 +761,7 @@ I'm good.",2011-07-03 12:15:44
 """
 
     def test_sqldump(self):
-        a = Babe().pull(stream=StringIO(self.s), format='sql', table='foobar', fields=['id', 'number', 'title', 'datetime'])    
+        a = Babe().pull(stream=StringIO(self.s), format='sql', table='foobar', fields=['id', 'number', 'title', 'datetime'])
         buf = StringIO()
         a.push(stream=buf, format='csv')
         self.assertEquals(buf.getvalue(), self.s2)
@@ -782,15 +796,15 @@ class TestTee(TestCase):
         self.assertEquals(len(b.to_list()), 1)
         self.assertEquals(len(c.to_list()), 1)
 
-class TestHTML(TestCase): 
+class TestHTML(TestCase):
     s = "a,b\n1,2\n"
-    def test_html(self): 
+    def test_html(self):
         a = Babe().pull(stream=StringIO(self.s), format="csv")
         buf = StringIO()
-        a.push(stream=buf, format="html") 
+        a.push(stream=buf, format="html")
         print buf.getvalue()
 
-class TestMAIL(TestCase): 
+class TestMAIL(TestCase):
     s1 = "a,b\n1,2\n"
     s2 = "c,d\n3,toto\n"
     def test_mail(self):
@@ -814,7 +828,7 @@ def debug(sig, frame):
 
 def listen():
     signal.signal(signal.SIGUSR1, debug)  # Register handler
-    
+
 listen()
 
 if __name__ == "__main__":
