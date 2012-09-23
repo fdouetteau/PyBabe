@@ -6,6 +6,7 @@ def equals_types(t1, t2):
 
 def merge_substreams(stream, partition=None):
 	header = None
+	footer = None
 	for row in stream: 
 		if isinstance(row, StreamHeader):
 			if header == None:
@@ -18,7 +19,8 @@ def merge_substreams(stream, partition=None):
 			footer = row
 		else:
 			yield row
-	yield footer
+	if footer:
+		yield footer
 
 BabeBase.register('merge_substreams', merge_substreams)
 
