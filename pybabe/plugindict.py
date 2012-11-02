@@ -13,6 +13,7 @@ class PluginDict(object):
         l = key.split("_")
         modules = [m1]
         if len(l) > 1:
+            modules.append("%s%s" % (self.prefix, l[0]))
             modules.append("%s%s" % (self.prefix, l[-1]))
         if key.endswith("s"):
             modules.append("%s%s" % (self.prefix, key[:-1]))

@@ -327,9 +327,9 @@ class BabeBase(object):
         }
         return d.get(format, ('application','octet-stream'))
 
-    def to_string(self): 
+    def to_string(self, format="csv"): 
         buf = StringIO()
-        self.push(stream=buf, format="csv")
+        self.push(stream=buf, format=format)
         return buf.getvalue()
 
     
@@ -370,6 +370,7 @@ def pull(babe, **kwargs):
     # Guess format             
     filename = kwargs.get('filename', None)
     stream = kwargs.get('stream', None)
+    string = kwargs.get('string', None)
     command = kwargs.get('command', None)
     compress_format = kwargs.get('compress_format', None)
     command_input = kwargs.get('command_input', None)
@@ -386,6 +387,8 @@ def pull(babe, **kwargs):
     # Open File
     elif stream:
         instream = stream
+    elif string:
+        instream = StringIO(string)
     elif command:
         p = Popen(command, stdin=PIPE, stdout=PIPE, stderr=None)
         if command_input:
