@@ -39,7 +39,10 @@ def mail(stream, subject, recipients, in_body=False, in_body_row_limit=None, att
     if isinstance(recipients, basestring):
         recipients = [recipients]
 
-    babes = stream.tee(len(formats))
+    if len(formats) > 1:
+        babes = stream.tee(len(formats))
+    else:
+        babes = [stream]
     if in_body and in_body_row_limit:
         babes[0] = babes[0].head(in_body_row_limit, all_streams=True)
 
