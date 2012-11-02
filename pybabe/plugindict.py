@@ -11,10 +11,12 @@ class PluginDict(object):
     def module_names(self, key):
         m1 = "%s%s" % (self.prefix, key)
         l = key.split("_")
+        modules = [m1]
         if len(l) > 1:
-            return [m1, "%s%s" % (self.prefix, l[-1])]
-        else:
-            return [m1]
+            modules.append("%s%s" % (self.prefix, l[-1]))
+        if key.endswith("s"):
+            modules.append("%s%s" % (self.prefix, key[:-1]))
+        return modules
 
     def load_module(self, key):
         modules = self.module_names(key)
