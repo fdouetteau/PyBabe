@@ -44,13 +44,15 @@ class PrefixReader(object):
         self.linefilter = linefilter
 
     def __iter__(self):
-        yield self.prefix
         linefilter = self.linefilter
         if linefilter:
+            if linefilter(self.prefix):
+                yield self.prefix
             for k in self.stream:
                 if linefilter(k):
                     yield k
         else:
+            yield self.prefix
             for k in self.stream:
                 yield k
 
