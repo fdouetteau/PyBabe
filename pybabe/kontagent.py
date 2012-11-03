@@ -7,7 +7,7 @@ import urllib
 from pytz import timezone, utc
 import cgi
 from multiprocessing.dummy import Pool
-from geo import get_gic
+from geoip import get_gic
 import logging
 from subprocess import Popen, PIPE
 import os
