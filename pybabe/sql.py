@@ -9,9 +9,18 @@ from charset import UnicodeCSVWriter
 import sys
 import os
 import tempfile
+import stat
 
 
 PULL_DB = {
+    'infobright':
+        {
+            'query_template': '${query};\n',
+            'command': ['mysql-ib'],
+            'separator': '--delimiter=%s',
+            'user': '-u%s',
+            'password': '-p%s'
+        },
     'mysql':
         {
             'query_template': '${query};\n',
@@ -45,7 +54,30 @@ PULL_DB = {
         }
 }
 
+def infobright_preimport():
+    d = '/tmp/rejectdir'
+    if not os.path.exists(d):
+        os.mkdir(d)
+        mode = os.stat(d).st_mode
+        os.chmod(mode | stat.S_WOTH)
+    f = os.path.join(d, "rejectfile")
+    if os.path.exists(f):
+        os.path.remove(f)
+
 PUSH_DB = {
+    'infobright':
+    {
+        'command': ['mysql-ib', '--local-infile'],
+        'user': '-u%s',
+        'password': '-p%s',
+        'drop_table': 'DROP TABLE IF EXISTS %s;\n',
+        'create_table': 'CREATE TABLE IF NOT EXISTS ${table} ( ${fields} );\n',
+        'preimport' : infobright_preimport,
+        'import_query': """set @BH_REJECT_FILE_PATH = '/tmp/rejectdir/reject_file';
+                set @BH_ABORT_ON_COUNT = 10;
+                LOAD DATA LOCAL INFILE '%s' INTO TABLE %s FIELDS TERMINATED BY '\t';\n""",
+      ##  'delete_partition': 'DELETE FROM ${table} where ${condition};\n'
+    },
     'sqlite':
     {
         'command': ['sqlite3'],
@@ -63,6 +95,17 @@ PUSH_DB = {
         'create_table': 'CREATE TABLE IF NOT EXISTS ${table} ( ${fields} );\n',
         'import_query': "LOAD DATA LOCAL INFILE '%s' INTO TABLE %s FIELDS TERMINATED BY '\t';\n",
         'delete_partition': 'DELETE FROM ${table} where ${condition};\n'
+    },
+    'infinidb': 
+    { 
+     
+## Warning: seteuid must be set on the cpimport command
+        'load_command' : ['/usr/local/Calpont/bin/cpimport',  '-s',  '\t',  '${database}', '${table}'],
+        'command' : ['/usr/local/Calpont/mysql/bin/mysql', '--defaults-file=/usr/local/Calpont/mysql/my.cnf'],
+        'user' : '-u%s',
+        'drop_table': 'DROP TABLE IF EXISTS %s;',
+        "create_table": "CREATE TABLE  ${table} ( ${fields} );",
+        'delete_partition': 'DELETE FROM ${table} where ${condition};'
     },
     'vectorwise':
     {
@@ -249,13 +292,17 @@ def push_sql(stream, database_kind, table=None, host=None, create_table=False, d
             if delete_partition and not drop_table:
                 if not metainfo.partition:
                     raise Exception("No partition information available in header: unable to delete partition")
-                conditions = ["%s = '%s'" % (k, str(v)) for (k, v) in metainfo.partition.iteritems()]
-                condition = ' AND '.join(conditions)
-                delete_partition_query = Template(db_params['delete_partition']).substitute(table=table_name, condition=condition)
-                p.stdin.write(delete_partition_query)
-                p.stdin.flush()
-                if p.returncode:
-                    break
+                if not 'delete_partition' in db_params:
+                    print "Warning: target database does not support delete"
+                else:
+                    conditions = ["%s = '%s'" % (k, str(v)) for (k, v) in metainfo.partition.iteritems()]
+                    condition = ' AND '.join(conditions)
+                    delete_partition_query = Template(db_params['delete_partition']).substitute(table=table_name, condition=condition)
+                    print "DELETING", delete_partition_query
+                    p.stdin.write(delete_partition_query)
+                    p.stdin.flush()
+                    if p.returncode:
+                        break
 
             p.stdin.close()
             p.wait()
@@ -263,6 +310,9 @@ def push_sql(stream, database_kind, table=None, host=None, create_table=False, d
             writestream = None
 
             #print import_query
+            if "preimport" in db_params:
+                db_params["preimport"]()
+
             if "import_query" in db_params:
                 p = Popen(c, stdin=PIPE, stdout=None, stderr=None)
                 tmpfifo = TempFifo()
