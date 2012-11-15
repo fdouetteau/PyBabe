@@ -11,6 +11,7 @@ from geoip import get_gic
 import logging
 from subprocess import Popen, PIPE
 import os
+import urlparse
 
 
 def get_url(date, kt_user, kt_pass, kt_appid):
@@ -81,18 +82,25 @@ kt_msg = StreamHeader(typename='ktg', fields=[
                 #   l = age
             'recipients',  # list of recipients uid, comma separated (ins,nes) VARCHAR(1023)
             'tracking_tag',  # unique tracking tag ( also match su : short tracking tag) VARCHAR(63)
-            'data',  # JSON Payload + additional query parameters not processed VARCHAR(255)
+            'data',  # JSON Payload + additional query parameters not processed VARCHAR(255), 
+            'ip'
         ])
 
 
 def process_file(base_date, f, discard_names):
     gic = get_gic()
-    t = kt_msg.t
     for line in f:
+        v =  process_line(base_date, line, discard_names)
+        if v: 
+            yield v
+
+
+def process_line(base_date, line, discard_names):
+        t = kt_msg.t
         line = line.rstrip('\n')
         line_segments = line.split(' ')
         if len(line_segments) != 5:
-            continue
+            return
         seconds, msgtype, params_string, source_ip, referer = line_segments
         params = {}
         for k, v in cgi.parse_qs(params_string).items():
@@ -111,6 +119,7 @@ def process_file(base_date, f, discard_names):
         value = params.get('v', None)
         level = params.get('l', None)
         recipients = params.get('r', None)
+        ip = params.get('ip', source_ip)
         if msgtype != "pgr":
             tracking_tag = params.get('u', None)
         else:
@@ -118,8 +127,10 @@ def process_file(base_date, f, discard_names):
             source_url = params.get('u', None)
             if source_url:
                 try:
-                    for k, v in cgi.parse_qs(source_url).items():
-                        params[k] = v[0]
+                    o = urlparse.urlparse(source_url)
+                    if o.query:
+                        for k, v in cgi.parse_qs(o.query).items():
+                            params[k] = v[0]
                 except Exception, e:
                     print e
                     pass
@@ -127,7 +138,7 @@ def process_file(base_date, f, discard_names):
         if not name:
             name = msgtype
         if name in discard_names:
-            continue
+            return
         if msgtype == "pgr":
             referer = referer.replace('\"', '')
             if referer == '-':
@@ -141,18 +152,21 @@ def process_file(base_date, f, discard_names):
                         st1 = srefs[2]
             if source_ip:
                 try:
-                    st2 = gic.country_code_by_addr(params.get('ip', source_ip))
+                    st2 = gic.country_code_by_addr(ip)
                     if st2:
                         st2 = st2.upper()
                 except:
                     pass
             st3 = params.get('scheme', None)
         if msgtype == "apa" or msgtype == "pgr":
-            for k in ["fbx_type", "fb_source", "fbx_ref", "ref"]:
-                if not channel_type:
-                    channel_type = params.get(k, None)
-                else:
-                    break
+            if "fb_appcenter" in params:
+                channel_type = 'fb_appcenter'
+            else:
+                for k in ["fbx_type", "fb_source", "fbx_ref", "ref", ]:
+                    if not channel_type:
+                        channel_type = params.get(k, None)
+                    else:
+                        break
         elif msgtype == 'cpu':
             st1 = params.get('g', None)
             st2 = params.get('lc', None)
@@ -175,10 +189,10 @@ def process_file(base_date, f, discard_names):
             recipients = None
         if 'su' in params:
             tracking_tag = params['su']
-        yield t(date, hour, time, name, uid,
+        return t(date, hour, time, name, uid,
             st1, st2, st3,
             channel_type, value, level,
-            recipients, tracking_tag, data)
+            recipients, tracking_tag, data, ip)
 
 log = logging.getLogger('kontagent')
 
