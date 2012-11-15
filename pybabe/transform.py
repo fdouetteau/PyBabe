@@ -318,7 +318,9 @@ BabeBase.register("filter_by_regexp", filter_by_regexp)
 def rename(stream, **kwargs):
     for row in stream:
         if isinstance(row, StreamHeader):
+
             metainfo = row.replace(typename=None,
+                partition=[(kwargs.get(name, name), row.partition[name]) for name in row.partition],
             fields=[kwargs.get(name, name) for name in row.fields])
             yield metainfo
         elif isinstance(row, StreamMeta):
