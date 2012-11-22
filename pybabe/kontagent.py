@@ -135,6 +135,11 @@ def process_line(base_date, line, discard_names):
                     print e
                     pass
         data = params.get('data', None)
+        data_parameters = base64.b64decode(data)
+        data_object = json.loads(data_parameters)
+        if data_object['recipient'] {
+            recipients = data_object['recipient']
+        } 
         if not name:
             name = msgtype
         if name in discard_names:
