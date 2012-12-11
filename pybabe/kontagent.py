@@ -12,6 +12,7 @@ import logging
 from subprocess import Popen, PIPE
 import os
 import urlparse
+import base64
 
 
 def get_url(date, kt_user, kt_pass, kt_appid):
