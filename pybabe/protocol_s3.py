@@ -83,6 +83,9 @@ class ReadLineWrapper(object):
         self.obj.close()
 
 
+def progress_call_back(done, todo):
+    print "Done %u out of %u (%f%%)" % (done, todo, (done*100)/todo)
+
 def pull(filename_remote, **kwargs):
     bucket = get_bucket(kwargs)
     cache = BabeBase.get_config("s3", "cache", default=False)
@@ -101,7 +104,7 @@ def pull(filename_remote, **kwargs):
             if os.path.exists(f):
                 files.append(open(f, "r"))
             else:
-                key.get_contents_to_filename(f + ".tmp")
+                key.get_contents_to_filename(f + ".tmp", cb=progress_call_back)
                 os.rename(f + ".tmp", f)
                 files.append(open(f, "r"))
         else:
