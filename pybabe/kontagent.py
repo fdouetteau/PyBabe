@@ -90,12 +90,12 @@ kt_msg = StreamHeader(typename='ktg', fields=[
 def process_file(base_date, f, discard_names):
     gic = get_gic()
     for line in f:
-        v =  process_line(base_date, line, discard_names)
+        v =  process_line(gic, base_date, line, discard_names)
         if v: 
             yield v
 
 
-def process_line(base_date, line, discard_names):
+def process_line(gic, base_date, line, discard_names):
         t = kt_msg.t
         line = line.rstrip('\n')
         line_segments = line.split(' ')
